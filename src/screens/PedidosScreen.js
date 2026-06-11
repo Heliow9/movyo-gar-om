@@ -102,6 +102,15 @@ const isSameLocalDate = (value, iso) => {
   return d.getFullYear() === Number(m[1]) && d.getMonth() + 1 === Number(m[2]) && d.getDate() === Number(m[3]);
 };
 const isPedidoVisivel = (p) => !HIDDEN_FROM_PEDIDOS.has(normalizeStatus(p?.status)) && !HIDDEN_FROM_PEDIDOS.has(normalizeStatus(p?.statusPagamento));
+const isOrigemVitrine = (p) => ["vitrine", "delivery", "site", "web", "app", "online"].includes(normalizeStatus(p?.origem || p?.tipo || p?.canal));
+const isStatusAReceber = (p) => {
+  const st = normalizeStatus(p?.status);
+  const pg = normalizeStatus(p?.statusPagamento || p?.pagamento?.status);
+  if (["cancelado", "cancelada", "canceled", "entregue", "finalizado", "concluido", "concluído"].includes(st)) return false;
+  if (["em_producao", "producao", "preparando", "em_preparo", "em_entrega", "em_rota", "pronto"].includes(st)) return false;
+  return ["pago", "pendente", "aguardando_resposta", "recebido", "novo", "criado", "confirmado"].includes(st) || pg === "pago";
+};
+const isPedidoAReceber = (p) => isOrigemVitrine(p) && isStatusAReceber(p);
 const statusLabel = (status) => STATUS_LABELS[normalizeStatus(status)] || safeText(status) || "Pendente";
 
 const pickPedidoId = (p) => p?._id || p?.id || p?.pedidoId;
@@ -130,7 +139,7 @@ function itemQty(it) {
   return Number.isFinite(q) && q > 0 ? q : 1;
 }
 
-export default function PedidosScreen({ navigation }) {
+export default function PedidosScreen({ navigation, route }) {
   const { headerGradient } = useAppTheme();
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -144,6 +153,7 @@ export default function PedidosScreen({ navigation }) {
   const [isOnline, setIsOnline] = useState(true);
   const [fromCache, setFromCache] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
+  const modoAReceber = route?.params?.modo === "a_receber";
 
   useEffect(() => {
     if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -244,6 +254,7 @@ export default function PedidosScreen({ navigation }) {
   const pedidosFiltrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return pedidos
+      .filter((p) => !modoAReceber || isPedidoAReceber(p))
       .filter((p) => filtro === "todos" || normalizeStatus(p?.status) === filtro)
       .filter((p) => {
         if (!q) return true;
@@ -254,7 +265,7 @@ export default function PedidosScreen({ navigation }) {
         return hay.includes(q);
       })
       .sort((a, b) => new Date(pickCriadoEm(b)).getTime() - new Date(pickCriadoEm(a)).getTime());
-  }, [busca, filtro, pedidos]);
+  }, [busca, filtro, modoAReceber, pedidos]);
 
   const aplicarData = () => {
     const iso = brToIsoDate(dataFiltro);
@@ -390,8 +401,8 @@ export default function PedidosScreen({ navigation }) {
             <Ionicons name="arrow-back" size={18} color="#fff" />
           </Pressable>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.hTitle}>Pedidos</Text>
-            <Text style={styles.hSub} numberOfLines={1}>{isOnline ? "Fila em tempo real do atendimento" : "Offline: exibindo cache local"}</Text>
+            <Text style={styles.hTitle}>{modoAReceber ? "Pedidos A Receber" : "Pedidos"}</Text>
+            <Text style={styles.hSub} numberOfLines={1}>{isOnline ? (modoAReceber ? "Pedidos vindos da vitrine em tempo real" : "Fila em tempo real do atendimento") : "Offline: exibindo cache local"}</Text>
           </View>
           <Animated.View style={[styles.iconBadge, pulseStyle]}>
             <Ionicons name="receipt-outline" size={18} color="#fff" />
@@ -415,6 +426,13 @@ export default function PedidosScreen({ navigation }) {
           <View style={styles.offlineBanner}>
             <Ionicons name="cloud-offline-outline" size={17} color="#92400e" />
             <Text style={styles.offlineText}>Sem internet: lista carregada do cache. Ao estabilizar, os pedidos são atualizados com o servidor.</Text>
+          </View>
+        )}
+
+        {modoAReceber && (
+          <View style={styles.receiveBanner}>
+            <Ionicons name="notifications-outline" size={18} color="#9a3412" />
+            <Text style={styles.receiveBannerText}>Exibindo apenas pedidos recebidos pela vitrine/site para o restaurante aceitar e acompanhar.</Text>
           </View>
         )}
 
@@ -448,17 +466,19 @@ export default function PedidosScreen({ navigation }) {
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
-          {STATUS_ORDER.filter((st) => st === "todos" || counts[st]).map((st) => {
-            const active = filtro === st;
-            return (
-              <Pressable key={st} onPress={() => setFiltro(st)} style={[styles.filterChip, active && styles.filterChipActive]}>
-                <Text style={[styles.filterText, active && styles.filterTextActive]}>{st === "todos" ? "Todos" : statusLabel(st)}</Text>
-                <Text style={[styles.filterCount, active && styles.filterTextActive]}>{counts[st] || 0}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        {!modoAReceber && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+            {STATUS_ORDER.filter((st) => st === "todos" || counts[st]).map((st) => {
+              const active = filtro === st;
+              return (
+                <Pressable key={st} onPress={() => setFiltro(st)} style={[styles.filterChip, active && styles.filterChipActive]}>
+                  <Text style={[styles.filterText, active && styles.filterTextActive]}>{st === "todos" ? "Todos" : statusLabel(st)}</Text>
+                  <Text style={[styles.filterCount, active && styles.filterTextActive]}>{counts[st] || 0}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {loading ? (
           <View style={styles.loadingBox}><ActivityIndicator size="large" /><Text style={styles.loadingText}>Carregando pedidos...</Text></View>
@@ -492,6 +512,8 @@ const styles = StyleSheet.create({
   contentInner: { padding: 16, paddingBottom: 34 },
   offlineBanner: { marginBottom: 12, padding: 12, borderRadius: 20, backgroundColor: "#fffbeb", borderWidth: 1, borderColor: "#fde68a", flexDirection: "row", gap: 9, alignItems: "flex-start" },
   offlineText: { flex: 1, color: "#92400e", fontWeight: "800", lineHeight: 18, fontSize: 12 },
+  receiveBanner: { marginBottom: 12, padding: 12, borderRadius: 20, backgroundColor: "#fff7ed", borderWidth: 1, borderColor: "#fed7aa", flexDirection: "row", gap: 9, alignItems: "flex-start" },
+  receiveBannerText: { flex: 1, color: "#9a3412", fontWeight: "900", lineHeight: 18, fontSize: 12 },
   searchCard: { borderRadius: 24, padding: 12, backgroundColor: "rgba(255,255,255,0.96)", borderWidth: 1, borderColor: "rgba(15,23,42,0.08)", shadowColor: "#0f172a", shadowOpacity: 0.08, shadowRadius: 18, elevation: 3 },
   searchBox: { height: 46, borderRadius: 17, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: "rgba(15,23,42,0.08)", paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8 },
   searchInput: { flex: 1, color: "#0f172a", fontWeight: "700" },

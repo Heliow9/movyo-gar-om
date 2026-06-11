@@ -14,6 +14,7 @@ import {
   UIManager,
   Platform,
   AppState,
+  Vibration,
 } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { LinearGradient } from "expo-linear-gradient";
@@ -26,6 +27,7 @@ import { connectSocket, getSocket } from "../socket/socket";
 import { useAppTheme } from "../theme/ThemeProvider";
 import { cachedApiGet, cacheGetData, cacheSet } from "../utils/smartCache";
 import { flushQueue, getQueueCount, startQueueWatcher } from "../utils/offlineQueue";
+import { alertNovoPedido, requestNotificationPermission } from "../utils/pwaNotifications";
 
 const RESUMO_CACHE_KEY = "garcom:dashboard:resumo:v4-dia-garcom";
 
@@ -56,6 +58,7 @@ const normalizeResumo = (data = {}, session = null) => {
   const vendas = Number(vendasHojeGarcomRaw ?? 0) || 0;
 
   const pedidosPendentes = Number(data?.pedidosPendentes ?? data?.pedidosFila ?? data?.pedidosAtivos ?? 0) || 0;
+  const pedidosAReceber = Number(data?.pedidosAReceber ?? data?.aReceber ?? data?.recebidosVitrine ?? 0) || 0;
   const mesasAbertas = Number(data?.mesasAbertas ?? data?.mesasOcupadas ?? data?.mesasAtivas ?? 0) || 0;
   const tempoMedio = data?.tempoMedio ?? data?.tempoMedioAtendimento ?? data?.tempoMedioPedido ?? "—";
   const ranking = Array.isArray(data?.rankingGarconsHoje) && data.rankingGarconsHoje.length
@@ -67,6 +70,7 @@ const normalizeResumo = (data = {}, session = null) => {
   return {
     mesasAbertas,
     pedidosPendentes,
+    pedidosAReceber,
     vendasTurno: vendas,
     tempoMedio,
     ranking: ranking.slice(0, 5),
@@ -81,6 +85,24 @@ const countMesasAbertas = (mesas = []) => {
   const statusAbertos = new Set(["ocupada", "ocupado", "aberta", "em_aberto", "aberto", "em_uso", "uso"]);
   return (Array.isArray(mesas) ? mesas : []).filter((m) => statusAbertos.has(String(m?.status || "").trim().toLowerCase())).length;
 };
+
+
+const norm = (v) => String(v || "").trim().toLowerCase();
+const pickPlano = (session) => norm(session?.restaurante?.plano || session?.restaurante?.planoCodigo || session?.restaurante?.assinatura?.plano || session?.restaurante?.licenca?.plano);
+const isStarterMobilePlan = (session) => ["starter-mobile", "start-mobile", "starter_mobile", "start_mobile"].includes(pickPlano(session));
+const isOrigemVitrine = (pedido) => ["vitrine", "delivery", "site", "web", "app", "online"].includes(norm(pedido?.origem || pedido?.tipo || pedido?.canal));
+const isStatusAReceber = (pedido) => {
+  const st = norm(pedido?.status);
+  const pg = norm(pedido?.statusPagamento || pedido?.pagamento?.status);
+  if (["cancelado", "cancelada", "canceled", "entregue", "finalizado", "concluido", "concluído"].includes(st)) return false;
+  if (["em_producao", "producao", "preparando", "em_preparo", "em_entrega", "em_rota", "pronto"].includes(st)) return false;
+  return ["pago", "pendente", "aguardando_resposta", "recebido", "novo", "criado", "confirmado"].includes(st) || pg === "pago";
+};
+const isPedidoAReceber = (pedido) => isOrigemVitrine(pedido) && isStatusAReceber(pedido);
+const pickPedidoId = (p) => p?._id || p?.id || p?.pedidoId;
+const pickPedidoNumero = (p) => p?.numeroPedido || p?.numero_pedido || p?.pedidoNumero || p?.codigoPedido || p?.numero || p?.codigo || String(pickPedidoId(p) || "").slice(-6);
+const pickPedidoCliente = (p) => p?.nomeCliente || p?.cliente?.nome || p?.clienteNome || p?.mesaCliente || p?.cliente || "Cliente";
+const pickPedidoTotal = (p) => p?.total ?? p?.valorTotal ?? p?.valor ?? p?.subtotal ?? "";
 
 export default function HomeScreen({ navigation, onLogout }) {
   const { headerGradient } = useAppTheme();
@@ -98,6 +120,9 @@ export default function HomeScreen({ navigation, onLogout }) {
   const [isOnline, setIsOnline] = useState(true);
   const [queueCount, setQueueCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const notifiedPedidosRef = useRef(new Set());
+
+  const starterMobile = isStarterMobilePlan(session);
 
   useEffect(() => {
     if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -126,6 +151,26 @@ export default function HomeScreen({ navigation, onLogout }) {
 
   const loadQueueCount = useCallback(async () => {
     try { setQueueCount(await getQueueCount()); } catch { setQueueCount(0); }
+  }, []);
+
+  const notifyPedidoRecebido = useCallback(async (pedido = {}) => {
+    const id = pickPedidoId(pedido) || pickPedidoNumero(pedido);
+    if (!id || notifiedPedidosRef.current.has(id)) return;
+    notifiedPedidosRef.current.add(id);
+
+    const numero = pickPedidoNumero(pedido);
+    const cliente = pickPedidoCliente(pedido);
+    const total = pickPedidoTotal(pedido);
+    const mensagem = `${numero ? `Pedido #${numero}` : "Novo pedido"} de ${cliente}${total ? ` • ${moneyBRL(total)}` : ""}`;
+
+    if (Platform.OS === "web") {
+      try { await requestNotificationPermission(); } catch (_) {}
+      try { await alertNovoPedido({ ...pedido, codigo: numero, cliente, total }); } catch (_) {}
+      return;
+    }
+
+    try { Vibration.vibrate([220, 90, 220]); } catch (_) {}
+    Alert.alert("📥 Pedido A Receber", mensagem);
   }, []);
 
   const fetchDashboard = useCallback(async ({ silent = false } = {}) => {
@@ -164,6 +209,22 @@ export default function HomeScreen({ navigation, onLogout }) {
           } catch (_) {}
         }
       }
+
+      // Fonte de verdade para o botão “A Receber”: pedidos vindos da vitrine/site.
+      // Mantém compatibilidade com APIs antigas do garçom e com a mesma ideia do desktop.
+      try {
+        const pedidosRes = await api.get("/api/garcons/app/pedidos", { params: { limit: 300 } });
+        const pedidosRaw = Array.isArray(pedidosRes?.data)
+          ? pedidosRes.data
+          : Array.isArray(pedidosRes?.data?.pedidos)
+            ? pedidosRes.data.pedidos
+            : Array.isArray(pedidosRes?.data?.items)
+              ? pedidosRes.data.items
+              : Array.isArray(pedidosRes?.data?.data)
+                ? pedidosRes.data.data
+                : [];
+        resumoNormalizado.pedidosAReceber = pedidosRaw.filter(isPedidoAReceber).length;
+      } catch (_) {}
 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setDashboard(resumoNormalizado);
@@ -243,14 +304,21 @@ export default function HomeScreen({ navigation, onLogout }) {
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => fetchDashboard({ silent: true }), 600);
       };
-      ["mesaAtualizada", "pedidoAtualizado", "novoPedido", "pedidoCriado", "pagamentoAtualizado", "balcaoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => socket.on(ev, schedule));
+      const handlePedidoVitrine = (payload = {}) => {
+        const pedido = payload?.pedido || payload;
+        if (isPedidoAReceber(pedido)) notifyPedidoRecebido(pedido);
+        schedule();
+      };
+      ["mesaAtualizada", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => socket.on(ev, schedule));
+      ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado"].forEach((ev) => socket.on(ev, handlePedidoVitrine));
     })();
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       const s = getSocket();
-      ["mesaAtualizada", "pedidoAtualizado", "novoPedido", "pedidoCriado", "pagamentoAtualizado", "balcaoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => s?.off(ev));
+      ["mesaAtualizada", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => s?.off(ev));
+      ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado"].forEach((ev) => s?.off(ev));
     };
-  }, [fetchDashboard]);
+  }, [fetchDashboard, notifyPedidoRecebido]);
 
   const restauranteNome = session?.restaurante?.nome || "Movyo Garçom";
   const garcomNome = session?.garcom?.apelido || session?.garcom?.nome || "Pronto pra atender";
@@ -355,6 +423,15 @@ export default function HomeScreen({ navigation, onLogout }) {
         <View style={styles.actionsGrid}>
           <Action icon="grid-outline" title="Mesas" sub="Abrir e ver consumo" badge={dashboard.mesasAbertas} onPress={() => navigation.navigate("Mesas")} />
           <Action icon="receipt-outline" title="Pedidos" sub="Fila e status" badge={dashboard.pedidosPendentes} onPress={() => navigation.navigate("Pedidos")} />
+          {starterMobile && (
+            <Action
+              icon="notifications-outline"
+              title="A Receber"
+              sub="Pedidos da vitrine"
+              badge={dashboard.pedidosAReceber}
+              onPress={() => navigation.navigate("Pedidos", { modo: "a_receber" })}
+            />
+          )}
           <Action icon="storefront-outline" title="Balcão" sub="Pedido rápido + PIX" onPress={() => navigation.navigate("Balcao")} />
           <Action icon="person-outline" title="Meu perfil" sub="Permissões e dados" onPress={() => navigation.navigate("MeuPerfil")} />
           <Action icon="sync-outline" title="Sincronizar" sub="Enviar offline" badge={queueCount} onPress={syncNow} />
