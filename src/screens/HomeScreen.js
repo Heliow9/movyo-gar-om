@@ -122,8 +122,6 @@ export default function HomeScreen({ navigation, onLogout }) {
   const [syncing, setSyncing] = useState(false);
   const notifiedPedidosRef = useRef(new Set());
 
-  const starterMobile = isStarterMobilePlan(session);
-
   useEffect(() => {
     if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -423,15 +421,13 @@ export default function HomeScreen({ navigation, onLogout }) {
         <View style={styles.actionsGrid}>
           <Action icon="grid-outline" title="Mesas" sub="Abrir e ver consumo" badge={dashboard.mesasAbertas} onPress={() => navigation.navigate("Mesas")} />
           <Action icon="receipt-outline" title="Pedidos" sub="Fila e status" badge={dashboard.pedidosPendentes} onPress={() => navigation.navigate("Pedidos")} />
-          {starterMobile && (
-            <Action
-              icon="notifications-outline"
-              title="A Receber"
-              sub="Pedidos da vitrine"
-              badge={dashboard.pedidosAReceber}
-              onPress={() => navigation.navigate("Pedidos", { modo: "a_receber" })}
-            />
-          )}
+          <Action
+            icon="notifications-outline"
+            title="A Receber"
+            sub="Pedidos da vitrine"
+            badge={dashboard.pedidosAReceber}
+            onPress={() => navigation.navigate("Pedidos", { modo: "a_receber" })}
+          />
           <Action icon="storefront-outline" title="Balcão" sub="Pedido rápido + PIX" onPress={() => navigation.navigate("Balcao")} />
           <Action icon="person-outline" title="Meu perfil" sub="Permissões e dados" onPress={() => navigation.navigate("MeuPerfil")} />
           <Action icon="sync-outline" title="Sincronizar" sub="Enviar offline" badge={queueCount} onPress={syncNow} />
