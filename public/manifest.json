@@ -1,0 +1,36 @@
+{
+  "short_name": "Movyo Hub",
+  "name": "Movyo Hub Restaurante",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#ff3b8a",
+  "background_color": "#0E0E10",
+  "description": "Painel Movyo para gestão de pedidos, mesas, delivery e integrações do restaurante.",
+  "scope": "/",
+  "orientation": "portrait-primary",
+  "categories": [
+    "business",
+    "food",
+    "productivity"
+  ],
+  "lang": "pt-BR"
+}
