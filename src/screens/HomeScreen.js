@@ -13,6 +13,7 @@ import {
   LayoutAnimation,
   UIManager,
   Platform,
+  AppState,
 } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { LinearGradient } from "expo-linear-gradient";
@@ -203,6 +204,35 @@ export default function HomeScreen({ navigation, onLogout }) {
   }, []);
 
   useEffect(() => {
+    const atualizarAoChegarNaHome = () => fetchDashboard({ silent: true });
+    const unsubFocus = navigation?.addListener?.("focus", atualizarAoChegarNaHome);
+
+    const appSub = AppState.addEventListener?.("change", (state) => {
+      if (state === "active") atualizarAoChegarNaHome();
+    });
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const onFocus = () => atualizarAoChegarNaHome();
+      const onVisibility = () => {
+        if (document.visibilityState === "visible") atualizarAoChegarNaHome();
+      };
+      window.addEventListener("focus", onFocus);
+      document.addEventListener("visibilitychange", onVisibility);
+      return () => {
+        unsubFocus?.();
+        appSub?.remove?.();
+        window.removeEventListener("focus", onFocus);
+        document.removeEventListener("visibilitychange", onVisibility);
+      };
+    }
+
+    return () => {
+      unsubFocus?.();
+      appSub?.remove?.();
+    };
+  }, [navigation, fetchDashboard]);
+
+  useEffect(() => {
     let socket;
     (async () => {
       const s = await getSession();
@@ -213,12 +243,12 @@ export default function HomeScreen({ navigation, onLogout }) {
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => fetchDashboard({ silent: true }), 600);
       };
-      ["mesaAtualizada", "pedidoAtualizado", "novoPedido", "mesaCriada", "mesaExcluida"].forEach((ev) => socket.on(ev, schedule));
+      ["mesaAtualizada", "pedidoAtualizado", "novoPedido", "pedidoCriado", "pagamentoAtualizado", "balcaoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => socket.on(ev, schedule));
     })();
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       const s = getSocket();
-      ["mesaAtualizada", "pedidoAtualizado", "novoPedido", "mesaCriada", "mesaExcluida"].forEach((ev) => s?.off(ev));
+      ["mesaAtualizada", "pedidoAtualizado", "novoPedido", "pedidoCriado", "pagamentoAtualizado", "balcaoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => s?.off(ev));
     };
   }, [fetchDashboard]);
 

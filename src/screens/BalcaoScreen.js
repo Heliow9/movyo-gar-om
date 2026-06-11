@@ -576,6 +576,26 @@ export default function BalcaoScreen({ navigation }) {
     playBalcaoSound({ force: true });
   }, [playBalcaoSound]);
 
+  const mostrarVendaConfirmada = useCallback(({ forma, valor, desconto = 0, troco = 0, pedidoId = "" } = {}) => {
+    const titulo = "Venda confirmada";
+    const pedidoTxt = pedidoId ? `Pedido #${String(pedidoId).slice(-6)} confirmado via balcão.` : "Pedido de balcão confirmado.";
+    const detalhes = `${pedidoTxt} Pagamento em ${forma || "balcão"} no valor de ${money(valor)}.${desconto > 0 ? ` Desconto: ${money(desconto)}.` : ""}${troco > 0 ? ` Troco: ${money(troco)}.` : ""}`;
+
+    setBanner({ type: "success", title: titulo, message: detalhes });
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      // iOS/PWA às vezes não renderiza Alert.alert de forma consistente.
+      // O banner fica na tela e o alert nativo garante retorno imediato para o usuário.
+      setTimeout(() => window.alert(detalhes), 80);
+    } else {
+      Alert.alert(titulo, detalhes);
+    }
+
+    setTimeout(() => {
+      setBanner((current) => current?.title === titulo ? null : current);
+    }, 9000);
+  }, []);
+
   const loadProdutos = useCallback(async () => {
     try {
       setLoading(true);
@@ -803,7 +823,13 @@ export default function BalcaoScreen({ navigation }) {
           resumoItens: resumoItensTxt,
         });
         feedbackPagamentoBalcao();
-        Alert.alert("Pedido criado", `Pedido de balcão lançado e pago em ${isCartao ? pagamentoSelecionado.label : "dinheiro"}.${descontoApi > 0 ? ` Desconto: ${money(descontoApi)}.` : ""}${troco > 0 ? ` Troco: ${money(troco)}.` : ""}`);
+        mostrarVendaConfirmada({
+          forma: isCartao ? pagamentoSelecionado.label : "dinheiro",
+          valor: totalApi,
+          desconto: descontoApi,
+          troco,
+          pedidoId,
+        });
         setCarrinho([]); setTelefone(""); setCliente("Cliente balcão"); setPagamento("dinheiro"); setValorPagoDinheiro(""); setDinheiroOpen(false); setDescontoValor(""); setDescontoJaPerguntado(false);
         return;
       }

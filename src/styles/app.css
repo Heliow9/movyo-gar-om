@@ -3,4 +3,4 @@
 .row-actions{display:flex;gap:6px;flex-wrap:wrap}.danger-btn{color:#e03131!important}.select-pill{height:44px;border:1px solid var(--line);background:#fff;border-radius:16px;padding:0 14px;outline:0}.compact .stat-card,.stats.compact .stat-card{padding:16px}.table.simple .tr{grid-template-columns:1fr 1fr .8fr .8fr .8fr .8fr}.table.simple .tr.th{grid-template-columns:1fr 1fr .8fr .8fr .8fr .8fr}@media(max-width:1100px){.table.simple .tr,.table.simple .tr.th{grid-template-columns:1fr}}
 
 .date-pill{height:44px;border:1px solid var(--line);background:#fff;border-radius:16px;padding:0 14px;outline:0;color:var(--text);font-weight:700}
-.top-actions{flex-wrap:wrap}
+.top-actions{flex-wrap:wrap}html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{touch-action:manipulation}input,textarea,select{font-size:16px!important;-webkit-text-size-adjust:100%}button,a,[role="button"]{touch-action:manipulation}

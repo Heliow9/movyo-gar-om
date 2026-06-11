@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,11 +12,13 @@ import {
   TextInput,
   View,
   Platform,
+  AppState,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, authEvents } from "../api/api";
 import { clearSession, getSession, updateSessionRestaurantePatch } from "../api/storage/session";
 import { getAuthBlockMessageFromError, getRestauranteAccessBlockMessage } from "../utils/licenseGuard";
+import { connectSocket, getSocket } from "../socket/socket";
 
 const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza", PIZZA_DUAS: "pizza_duas" };
 const MOCK_IMAGE = "https://cdn.pixabay.com/photo/2017/12/09/08/18/pizza-3007395_960_720.jpg";
@@ -217,6 +219,8 @@ function SearchBox({ value, onChangeText, placeholder }) {
 }
 
 export default function HubRestauranteScreen({ onLogout }) {
+  const refreshDebounceRef = useRef(null);
+  const lastDashboardRefreshRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLabel, setActionLabel] = useState("");
@@ -343,6 +347,82 @@ export default function HubRestauranteScreen({ onLogout }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const refreshDashboardNow = useCallback(({ force = false, delay = 0 } = {}) => {
+    if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
+
+    const run = () => {
+      const now = Date.now();
+      if (!force && now - Number(lastDashboardRefreshRef.current || 0) < 2500) return;
+      lastDashboardRefreshRef.current = now;
+      load({ silent: true });
+    };
+
+    if (delay > 0) {
+      refreshDebounceRef.current = setTimeout(run, delay);
+      return;
+    }
+
+    run();
+  }, [load]);
+
+  useEffect(() => {
+    if (tab === "dashboard") refreshDashboardNow({ force: true });
+  }, [tab, refreshDashboardNow]);
+
+  useEffect(() => {
+    const onAppStateChange = (state) => {
+      if (state === "active") refreshDashboardNow({ force: true });
+    };
+    const sub = AppState.addEventListener?.("change", onAppStateChange);
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const onFocus = () => refreshDashboardNow({ force: true });
+      const onVisibility = () => {
+        if (document.visibilityState === "visible") refreshDashboardNow({ force: true });
+      };
+      window.addEventListener("focus", onFocus);
+      document.addEventListener("visibilitychange", onVisibility);
+      return () => {
+        sub?.remove?.();
+        window.removeEventListener("focus", onFocus);
+        document.removeEventListener("visibilitychange", onVisibility);
+      };
+    }
+
+    return () => sub?.remove?.();
+  }, [refreshDashboardNow]);
+
+  useEffect(() => {
+    if (!restauranteId) return undefined;
+    const socket = connectSocket(restauranteId);
+    const atualizar = () => refreshDashboardNow({ delay: 500 });
+    const eventos = [
+      "novoPedido",
+      "pedidoCriado",
+      "pedidoAtualizado",
+      "pagamentoAtualizado",
+      "balcaoAtualizado",
+      "mesaAtualizada",
+      "mesaCriada",
+      "mesaExcluida",
+      "caixaAtualizado",
+      "caixaAberto",
+      "caixaFechado",
+    ];
+    eventos.forEach((ev) => socket?.on?.(ev, atualizar));
+    return () => {
+      if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
+      const current = getSocket();
+      eventos.forEach((ev) => current?.off?.(ev, atualizar));
+    };
+  }, [restauranteId, refreshDashboardNow]);
+
+  useEffect(() => {
+    if (tab !== "dashboard") return undefined;
+    const id = setInterval(() => refreshDashboardNow(), 20000);
+    return () => clearInterval(id);
+  }, [tab, refreshDashboardNow]);
 
   const runAction = async (label, fn) => {
     setActionLabel(label);
