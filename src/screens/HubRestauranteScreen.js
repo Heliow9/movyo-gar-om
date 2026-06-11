@@ -19,12 +19,27 @@ import { api, authEvents } from "../api/api";
 import { clearSession, getSession, updateSessionRestaurantePatch } from "../api/storage/session";
 import { getAuthBlockMessageFromError, getRestauranteAccessBlockMessage } from "../utils/licenseGuard";
 import { connectSocket, getSocket } from "../socket/socket";
+import { alertNovoPedido, requestNotificationPermission } from "../utils/pwaNotifications";
 
 const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza", PIZZA_DUAS: "pizza_duas" };
 const MOCK_IMAGE = "https://cdn.pixabay.com/photo/2017/12/09/08/18/pizza-3007395_960_720.jpg";
 const moeda = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const onlyNumber = (v) => String(v || "").replace(/[^0-9.,-]/g, "").replace(",", ".");
 const getId = (o) => o?._id || o?.id;
+
+const normalizeText = (v) => String(v || "").trim().toLowerCase();
+const isOrigemVitrineHub = (pedido = {}) => {
+  const origem = normalizeText(pedido.origem || pedido.tipo || pedido.canal || pedido.source);
+  return ["vitrine", "delivery", "site", "web", "online", "loja_online", "loja-online"].includes(origem);
+};
+const isStatusAReceberHub = (pedido = {}) => {
+  const status = normalizeText(pedido.status || pedido.statusPedido);
+  const statusPagamento = normalizeText(pedido.statusPagamento || pedido?.pagamento?.status);
+  if (["cancelado", "cancelada", "canceled", "entregue", "concluido", "concluído", "finalizado"].includes(status)) return false;
+  return ["", "novo", "pendente", "recebido", "pago", "aguardando", "aguardando_confirmacao", "aguardando confirmação"].includes(status) || statusPagamento === "pago";
+};
+const isPedidoAReceberHub = (pedido = {}) => isOrigemVitrineHub(pedido) && isStatusAReceberHub(pedido);
+const getPedidoCodigoHub = (pedido = {}) => pedido.numeroPedido || pedido.numero || pedido.codigo || String(getId(pedido) || "").slice(-6);
 
 const LICENSE_DATE_FIELDS = [
   "dataFimPlano",
@@ -235,6 +250,7 @@ export default function HubRestauranteScreen({ onLogout }) {
   const [mesas, setMesas] = useState([]);
   const [garcons, setGarcons] = useState([]);
   const [pedidos, setPedidos] = useState([]);
+  const pedidosNotificadosRef = useRef(new Set());
   const [caixa, setCaixa] = useState(null);
 
   const [categoriaForm, setCategoriaForm] = useState(emptyCategoria());
@@ -264,7 +280,8 @@ export default function HubRestauranteScreen({ onLogout }) {
   const [botPolling, setBotPolling] = useState(false);
   const [botStatus, setBotStatus] = useState({ ligado: false, conectado: false, estado: "desconhecido", temQr: false, atualizadoEm: null, erroConexao: "" });
 
-  const starterMobile = String(rest?.plano || "").toLowerCase() === "starter-mobile";
+  const planoSlug = String(rest?.plano || rest?.planoNome || rest?.assinatura?.plano || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const starterMobile = planoSlug.includes("starter") && planoSlug.includes("mobile");
   const garcomLimitReached = starterMobile && !garcomEditandoId && garcons.length >= 2;
   const operadoresAtivos = useMemo(() => operadoresCaixa.filter((o) => o?.ativo !== false), [operadoresCaixa]);
   const operadorAbertura = useMemo(() => operadoresCaixa.find((o) => String(getId(o)) === String(caixaForm.operadorId)), [operadoresCaixa, caixaForm.operadorId]);
@@ -273,13 +290,15 @@ export default function HubRestauranteScreen({ onLogout }) {
   const aberturaExigePin = !!String(operadorAbertura?.pin || "").trim();
 
   const categoriaSelecionada = useMemo(() => categorias.find((c) => getId(c) === produtoForm.categoria), [categorias, produtoForm.categoria]);
+  const pedidosAReceber = useMemo(() => pedidos.filter(isPedidoAReceberHub), [pedidos]);
+
   const resumo = useMemo(() => {
     const hoje = new Date().toISOString().slice(0, 10);
     const pedidosHoje = pedidos.filter((p) => String(p.criadoEm || p.createdAt || "").slice(0, 10) === hoje || pedidos.length <= 20);
     const totalHoje = pedidosHoje.reduce((acc, p) => acc + Number(p.total || p.valorTotal || 0), 0);
     const pendentes = pedidos.filter((p) => ["pendente", "preparando", "em preparo", "aceito"].includes(String(p.status || "").toLowerCase())).length;
-    return { totalHoje, pendentes, mesasOcupadas: mesas.filter((m) => String(m.status).toLowerCase() !== "livre").length };
-  }, [pedidos, mesas]);
+    return { totalHoje, pendentes, aReceber: pedidosAReceber.length, mesasOcupadas: mesas.filter((m) => String(m.status).toLowerCase() !== "livre").length };
+  }, [pedidos, pedidosAReceber.length, mesas]);
 
   const licenseInfo = useMemo(() => getLicenseInfo(rest), [rest]);
 
@@ -400,6 +419,10 @@ export default function HubRestauranteScreen({ onLogout }) {
     const eventos = [
       "novoPedido",
       "pedidoCriado",
+      "pedidoVitrineCriado",
+      "pedidoRecebido",
+      "vitrinePedidoCriado",
+      "novoPedidoVitrine",
       "pedidoAtualizado",
       "pagamentoAtualizado",
       "balcaoAtualizado",
@@ -423,6 +446,31 @@ export default function HubRestauranteScreen({ onLogout }) {
     const id = setInterval(() => refreshDashboardNow(), 20000);
     return () => clearInterval(id);
   }, [tab, refreshDashboardNow]);
+
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      requestNotificationPermission().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!pedidosAReceber.length) return;
+    pedidosAReceber.forEach((pedido) => {
+      const id = String(getId(pedido) || pedido.numeroPedido || pedido.numero || "");
+      if (!id || pedidosNotificadosRef.current.has(id)) return;
+      pedidosNotificadosRef.current.add(id);
+      const codigo = getPedidoCodigoHub(pedido);
+      const cliente = pedido.nomeCliente || pedido.cliente || pedido.nome || "Cliente";
+      const mensagem = `Pedido ${codigo ? `#${codigo} ` : ""}de ${cliente} chegou pela vitrine.`;
+
+      if (Platform.OS === "web") {
+        alertNovoPedido({ ...pedido, codigo }).catch(() => {});
+      } else {
+        Alert.alert("📥 Pedido A Receber", mensagem);
+      }
+    });
+  }, [pedidosAReceber]);
 
   const runAction = async (label, fn) => {
     setActionLabel(label);
@@ -785,8 +833,8 @@ export default function HubRestauranteScreen({ onLogout }) {
     ]);
   };
 
-  const tabs = [["dashboard", "Início", "grid-outline"], ["categorias", "Categorias", "albums-outline"], ["produtos", "Produtos", "fast-food-outline"], ["mesas", "Mesas", "restaurant-outline"], ["pedidos", "Pedidos", "receipt-outline"], ["caixa", "Caixa", "cash-outline"], ["garcons", "Garçons", "people-outline"], ["config", "Config", "settings-outline"]];
-  const quickTabs = tabs.slice(0, 4);
+  const tabs = [["dashboard", "Início", "grid-outline"], ["a_receber", "A Receber", "notifications-outline"], ["categorias", "Categorias", "albums-outline"], ["produtos", "Produtos", "fast-food-outline"], ["mesas", "Mesas", "restaurant-outline"], ["pedidos", "Pedidos", "receipt-outline"], ["caixa", "Caixa", "cash-outline"], ["garcons", "Garçons", "people-outline"], ["config", "Config", "settings-outline"]];
+  const quickTabs = tabs.slice(0, 5);
 
   if (loading && !restauranteId) {
     return (
@@ -828,11 +876,17 @@ export default function HubRestauranteScreen({ onLogout }) {
           <View style={styles.metrics}>
             <Metric label="Hoje" value={moeda(resumo.totalHoje)} icon="cash-outline" />
             <Metric label="Pendentes" value={resumo.pendentes} icon="time-outline" />
+            <Metric label="A Receber" value={resumo.aReceber} icon="notifications-outline" />
             <Metric label="Mesas ocupadas" value={resumo.mesasOcupadas} icon="restaurant-outline" />
           </View>
           <Card title="Atalhos operacionais" icon="flash-outline" subtitle="Acesse rapidamente as áreas mais usadas.">
             <View style={styles.grid2}>
-              {tabs.slice(1, 7).map((t) => <Pressable key={t[0]} onPress={() => setTab(t[0])} style={styles.tile}><Ionicons name={t[2]} size={23} color="#ff3b8a" /><Text style={styles.tileText}>{t[1]}</Text></Pressable>)}
+              <Pressable onPress={() => setTab("a_receber")} style={[styles.tile, resumo.aReceber > 0 && styles.tileAttention]}>
+                <Ionicons name="notifications-outline" size={23} color="#ff3b8a" />
+                <Text style={styles.tileText}>A Receber</Text>
+                <Text style={styles.tileSub}>{resumo.aReceber} pedido(s) da vitrine</Text>
+              </Pressable>
+              {tabs.filter((t) => !["dashboard", "a_receber", "config"].includes(t[0])).slice(0, 6).map((t) => <Pressable key={t[0]} onPress={() => setTab(t[0])} style={styles.tile}><Ionicons name={t[2]} size={23} color="#ff3b8a" /><Text style={styles.tileText}>{t[1]}</Text></Pressable>)}
             </View>
           </Card>
         </>}
@@ -852,6 +906,8 @@ export default function HubRestauranteScreen({ onLogout }) {
           </Card>
           <MesasHubList mesas={mesas} onDelete={deletarMesa} />
         </>}
+
+        {tab === "a_receber" && <List title="Pedidos A Receber" items={pedidosAReceber.map((p) => `#${p.numeroPedido || getId(p)?.slice(-6) || ""} • ${p.nomeCliente || p.cliente || "Cliente"} • ${p.status || "pendente"} • ${moeda(p.total || p.valorTotal)}`)} />}
 
         {tab === "pedidos" && <List title="Controle de pedidos" items={pedidos.map((p) => `#${p.numeroPedido || getId(p)?.slice(-6) || ""} • ${p.status || "pendente"} • ${moeda(p.total || p.valorTotal)}`)} />}
 
@@ -1227,8 +1283,10 @@ const styles = StyleSheet.create({
   qrBox: { alignItems: "center", backgroundColor: "#f8fafc", borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 22, padding: 14, marginTop: 8 },
   qrImage: { width: 250, height: 250, borderRadius: 16, backgroundColor: "#fff" },
   grid2: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  tile: { width: "47%", minHeight: 86, borderRadius: 20, backgroundColor: "#f8fafc", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#e2e8f0" },
-  tileText: { marginTop: 6, fontWeight: "900", color: "#334155" },
+  tile: { width: "47%", minHeight: 86, borderRadius: 20, backgroundColor: "#f8fafc", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#e2e8f0", padding: 8 },
+  tileAttention: { borderColor: "rgba(255,59,138,0.55)", backgroundColor: "#fff1f2" },
+  tileText: { marginTop: 6, fontWeight: "900", color: "#334155", textAlign: "center" },
+  tileSub: { marginTop: 4, color: "#64748b", fontSize: 11, fontWeight: "800", textAlign: "center" },
   bottomNav: { position: "absolute", left: 10, right: 10, bottom: 10, minHeight: 70, backgroundColor: "#fff", borderRadius: 26, borderWidth: 1, borderColor: "#e2e8f0", flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingHorizontal: 6, shadowColor: "#0f172a", shadowOpacity: 0.14, shadowRadius: 16, elevation: 8 },
   bottomItem: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 8 },
   bottomText: { fontSize: 8, fontWeight: "900", color: "#94a3b8", marginTop: 3 },
