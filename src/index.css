@@ -11,26 +11,45 @@ code {
     monospace;
 }
 
-/* Movyo iOS/PWA: evita zoom automático ao focar campos sem afetar o app Android nativo */
+
+/* Movyo Hub - correção global para impedir zoom automático em inputs no iOS/PWA.
+   Aplicado somente no navegador; não altera Android/iOS nativo do Expo. */
 html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100% !important;
+  text-size-adjust: 100% !important;
+  touch-action: manipulation;
 }
 
 body {
-  touch-action: manipulation;
+  -webkit-text-size-adjust: 100% !important;
+  overscroll-behavior-y: none;
 }
 
 input,
 textarea,
-select {
+select,
+[contenteditable="true"],
+[role="textbox"],
+.MuiInputBase-input,
+.MuiOutlinedInput-input,
+.MuiInput-input,
+.MuiFilledInput-input {
   font-size: 16px !important;
-  -webkit-text-size-adjust: 100%;
+  line-height: 1.35 !important;
+  -webkit-text-size-adjust: 100% !important;
 }
 
-button,
-a,
-[role="button"] {
-  touch-action: manipulation;
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select,
+  [contenteditable="true"],
+  [role="textbox"],
+  .MuiInputBase-input,
+  .MuiOutlinedInput-input,
+  .MuiInput-input,
+  .MuiFilledInput-input {
+    font-size: 16px !important;
+    transform: translateZ(0);
+  }
 }
-

@@ -6,7 +6,11 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "postbuild:nozoom": "node scripts/postbuild-no-zoom-ios.js",
+    "build:web": "expo export -p web && node scripts/postbuild-no-zoom-ios.js",
+    "export:web": "expo export -p web && node scripts/postbuild-no-zoom-ios.js",
+    "build": "expo export -p web && node scripts/postbuild-no-zoom-ios.js"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",

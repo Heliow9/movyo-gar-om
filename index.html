@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
 
   <!-- Mobile / PWA -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="theme-color" content="#0E0E10" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -54,6 +54,38 @@
   <!-- Icons -->
   <link rel="apple-touch-icon" href="/logo192.png" />
   <link rel="manifest" href="/manifest.json" />
+
+  <script>
+    (function () {
+      var content = 'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content';
+      function ensureViewport() {
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('name', 'viewport');
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', content);
+      }
+      function normalizeFocusedInput(event) {
+        var el = event && event.target;
+        if (!el || !el.matches) return;
+        if (el.matches('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
+          try {
+            el.style.setProperty('font-size', '16px', 'important');
+            el.style.setProperty('-webkit-text-size-adjust', '100%', 'important');
+          } catch (e) {}
+          setTimeout(function () {
+            try { window.scrollTo(window.scrollX || 0, window.scrollY || 0); } catch (e) {}
+          }, 60);
+        }
+      }
+      ensureViewport();
+      document.addEventListener('DOMContentLoaded', ensureViewport);
+      document.addEventListener('focusin', normalizeFocusedInput, true);
+      document.addEventListener('touchend', ensureViewport, true);
+    })();
+  </script>
 </head>
 
 <body>

@@ -61,26 +61,3 @@ body::-webkit-scrollbar {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Movyo iOS/PWA: evita zoom automático ao focar campos sem afetar o app Android nativo */
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-body {
-  touch-action: manipulation;
-}
-
-input,
-textarea,
-select {
-  font-size: 16px !important;
-  -webkit-text-size-adjust: 100%;
-}
-
-button,
-a,
-[role="button"] {
-  touch-action: manipulation;
-}
-
