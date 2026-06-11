@@ -243,10 +243,20 @@ export default function MeuPerfilScreen({ navigation, onLogout }) {
     } finally {
       setLoggingOut(false);
       onLogout?.();
+      // ✅ PWA/iOS: força retorno ao login quando o estado fica preso em cache.
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.location.replace("/");
+      }
     }
   };
 
   const logout = () => {
+    if (Platform.OS === "web") {
+      const ok = typeof window !== "undefined" ? window.confirm("Deseja encerrar sua sessão?") : true;
+      if (ok) logoutNow();
+      return;
+    }
+
     Alert.alert("Sair", "Deseja encerrar sua sessão?", [
       { text: "Cancelar", style: "cancel" },
       { text: "Sair", style: "destructive", onPress: logoutNow },

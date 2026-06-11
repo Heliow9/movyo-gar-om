@@ -119,7 +119,63 @@ export async function isLogged() {
 }
 
 export async function clearSession() {
-  await AsyncStorage.removeItem(KEY);
+  // ✅ Logout robusto para Android/iOS nativo e PWA/iOS Safari.
+  // Em alguns navegadores o AsyncStorage Web persiste dentro do localStorage,
+  // então removemos também as chaves legadas usadas pela Hub.
+  const keysToRemove = [
+    KEY,
+    "token",
+    "_id",
+    "usuario",
+    "restaurante",
+    "restauranteSelecionado",
+    "garcom",
+    "operador",
+    "caixa",
+    "session",
+    "movyo_session",
+    "movyo_garcom_session",
+    "movyo_login_notice",
+    "pix_pendente",
+  ];
+
+  try {
+    await AsyncStorage.multiRemove(keysToRemove);
+  } catch {
+    try {
+      await AsyncStorage.removeItem(KEY);
+    } catch {}
+  }
+
+  // ✅ Web/PWA: limpa localStorage/sessionStorage sem quebrar app nativo.
+  try {
+    if (typeof window !== "undefined") {
+      keysToRemove.forEach((k) => {
+        try { window.localStorage?.removeItem(k); } catch {}
+        try { window.sessionStorage?.removeItem(k); } catch {}
+      });
+
+      // Remove chaves internas do AsyncStorage Web relacionadas à sessão.
+      try {
+        const storage = window.localStorage;
+        const toDelete = [];
+        for (let i = 0; i < storage.length; i += 1) {
+          const k = storage.key(i);
+          if (
+            k &&
+            (k.includes("movyo") ||
+              k.includes("session") ||
+              k.includes("token") ||
+              k === KEY ||
+              k.endsWith(KEY))
+          ) {
+            toDelete.push(k);
+          }
+        }
+        toDelete.forEach((k) => storage.removeItem(k));
+      } catch {}
+    }
+  } catch {}
 }
 
 /* =========================

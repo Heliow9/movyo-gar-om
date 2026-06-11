@@ -11,6 +11,7 @@ import {
   Text,
   TextInput,
   View,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api, authEvents } from "../api/api";
@@ -679,7 +680,30 @@ export default function HubRestauranteScreen({ onLogout }) {
 
   const botQrImageUrl = botQr ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data=${encodeURIComponent(botQr)}` : "";
 
-  const logout = async () => { await clearSession(); onLogout?.(); };
+  const logoutNow = async () => {
+    try {
+      await clearSession();
+    } finally {
+      onLogout?.();
+      // ✅ No iOS PWA, força recarregamento para sair mesmo quando o estado da navegação fica preso.
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.location.replace("/");
+      }
+    }
+  };
+
+  const logout = () => {
+    if (Platform.OS === "web") {
+      const ok = typeof window !== "undefined" ? window.confirm("Deseja encerrar sua sessão?") : true;
+      if (ok) logoutNow();
+      return;
+    }
+
+    Alert.alert("Sair", "Deseja encerrar sua sessão?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Sair", style: "destructive", onPress: logoutNow },
+    ]);
+  };
 
   const tabs = [["dashboard", "Início", "grid-outline"], ["categorias", "Categorias", "albums-outline"], ["produtos", "Produtos", "fast-food-outline"], ["mesas", "Mesas", "restaurant-outline"], ["pedidos", "Pedidos", "receipt-outline"], ["caixa", "Caixa", "cash-outline"], ["garcons", "Garçons", "people-outline"], ["config", "Config", "settings-outline"]];
   const quickTabs = tabs.slice(0, 4);

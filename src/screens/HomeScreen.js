@@ -226,10 +226,33 @@ export default function HomeScreen({ navigation, onLogout }) {
   const garcomNome = session?.garcom?.apelido || session?.garcom?.nome || "Pronto pra atender";
 
   const onRefresh = () => { setRefreshing(true); fetchDashboard({ silent: true }); };
-  const logout = () => Alert.alert("Sair", "Deseja encerrar sua sessão?", [
-    { text: "Cancelar", style: "cancel" },
-    { text: "Sair", style: "destructive", onPress: async () => { setLoggingOut(true); await clearSession(); setLoggingOut(false); onLogout?.(); } },
-  ]);
+  const logoutNow = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await clearSession();
+    } finally {
+      setLoggingOut(false);
+      onLogout?.();
+      // ✅ PWA/iOS: garante saída visual mesmo quando o navegador mantém a pilha em memória.
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.location.replace("/");
+      }
+    }
+  };
+
+  const logout = () => {
+    if (Platform.OS === "web") {
+      const ok = typeof window !== "undefined" ? window.confirm("Deseja encerrar sua sessão?") : true;
+      if (ok) logoutNow();
+      return;
+    }
+
+    Alert.alert("Sair", "Deseja encerrar sua sessão?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Sair", style: "destructive", onPress: logoutNow },
+    ]);
+  };
 
   const Skeleton = ({ height = 22, width = "70%" }) => (
     <Animated.View style={[styles.skeleton, { height, width, opacity: shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] }) }]} />
