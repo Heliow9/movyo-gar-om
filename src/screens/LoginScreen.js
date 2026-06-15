@@ -10,21 +10,24 @@ import {
   Image,
   Alert,
   Switch,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import Logo from "../../assets/logo.png";
 import AppVersionInfo from "../components/AppVersionInfo";
 import { api } from "../api/api";
 import { saveSession } from "../api/storage/session";
-import { getAuthBlockMessageFromError, getRestauranteAccessBlockMessage, pickRestauranteFromPayload } from "../utils/licenseGuard";
+import { getAuthBlockInfoFromError, getRestauranteAccessBlockInfo, pickRestauranteFromPayload } from "../utils/licenseGuard";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const REMEMBER_KEY = "@movyo_garcom_remember_login_v1";
 
-export default function LoginScreen({ onLogged }) {
+export default function LoginScreen({ onLogged, onBlocked }) {
   const [login, setLogin] = useState(""); // slug@telefone
   const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
@@ -111,8 +114,11 @@ export default function LoginScreen({ onLogged }) {
 
       if (!token) throw new Error("Token não retornou.");
 
-      const bloqueioMsg = getRestauranteAccessBlockMessage(restaurante);
-      if (bloqueioMsg) throw new Error(bloqueioMsg);
+      const bloqueio = getRestauranteAccessBlockInfo(restaurante);
+      if (bloqueio) {
+        onBlocked?.(bloqueio);
+        return;
+      }
 
       await saveSession({ token, restaurante, garcom, tipo: tipoLogin });
 
@@ -123,8 +129,12 @@ export default function LoginScreen({ onLogged }) {
       // ✅ só isso: AppNavigator troca para o stack logado
       onLogged?.();
     } catch (err) {
+      const block = getAuthBlockInfoFromError(err);
+      if (block) {
+        onBlocked?.(block);
+        return;
+      }
       const msg =
-        getAuthBlockMessageFromError(err) ||
         err?.response?.data?.message ||
         err?.response?.data?.mensagem ||
         err?.message ||
@@ -136,11 +146,10 @@ export default function LoginScreen({ onLogged }) {
   };
 
   return (
-    <LinearGradient colors={["#ff3b8a", "#ff9b2d"]} style={{ flex: 1 }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.container}
-      >
+    <LinearGradient colors={["#111827", "#4a1736", "#ff3b8a", "#ff9b2d"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboard}>
+          <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.logoOuter}>
             <View style={styles.logoWrapper}>
@@ -237,9 +246,8 @@ export default function LoginScreen({ onLogged }) {
               (!canSubmit || loading) && { opacity: 0.65 },
             ]}
           >
-            <Text style={styles.buttonText}>
-              {loading ? "Entrando..." : "Entrar"}
-            </Text>
+            {loading ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="arrow-forward-circle-outline" size={20} color="#fff" />}
+            <Text style={styles.buttonText}>{loading ? "Entrando..." : "Entrar com segurança"}</Text>
           </Pressable>
 
           <Text style={styles.helper}>
@@ -248,13 +256,17 @@ export default function LoginScreen({ onLogged }) {
         </View>
 
         <AppVersionInfo variant="light" style={styles.versionInfo} />
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "center" },
+  safe: { flex: 1 },
+  keyboard: { flex: 1 },
+  container: { flexGrow: 1, width: "100%", maxWidth: 540, alignSelf: "center", paddingHorizontal: 22, paddingVertical: 20, justifyContent: "center" },
   header: { alignItems: "center", marginBottom: 28 },
 
   logoOuter: {
@@ -299,9 +311,11 @@ const styles = StyleSheet.create({
   modeTextActive: { color: "#fff" },
 
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.98)",
+    borderRadius: 28,
     padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.72)",
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 20,
@@ -338,6 +352,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
     shadowColor: "#ff3b8a",
     shadowOpacity: 0.4,
     shadowRadius: 12,

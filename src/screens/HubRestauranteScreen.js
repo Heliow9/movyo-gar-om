@@ -13,12 +13,19 @@ import {
   View,
   Platform,
   AppState,
+  Modal,
+  RefreshControl,
+  useWindowDimensions,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import NetInfo from "@react-native-community/netinfo";
 import { api, authEvents } from "../api/api";
 import { clearSession, getSession, updateSessionRestaurantePatch } from "../api/storage/session";
-import { getAuthBlockMessageFromError, getRestauranteAccessBlockMessage } from "../utils/licenseGuard";
-import { connectSocket, getSocket } from "../socket/socket";
+import { getAuthBlockInfoFromError, getRestauranteAccessBlockInfo } from "../utils/licenseGuard";
+import { connectSocket, getSocket, onSocketState } from "../socket/socket";
 import { alertNovoPedido, requestNotificationPermission } from "../utils/pwaNotifications";
 
 const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza", PIZZA_DUAS: "pizza_duas" };
@@ -40,6 +47,46 @@ const isStatusAReceberHub = (pedido = {}) => {
 };
 const isPedidoAReceberHub = (pedido = {}) => isOrigemVitrineHub(pedido) && isStatusAReceberHub(pedido);
 const getPedidoCodigoHub = (pedido = {}) => pedido.numeroPedido || pedido.numero || pedido.codigo || String(getId(pedido) || "").slice(-6);
+
+const toLocalISODate = (value = new Date()) => {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+const startOfMonthISO = () => {
+  const d = new Date();
+  d.setDate(1);
+  return toLocalISODate(d);
+};
+const formatDateTimeBR = (value) => {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+};
+const pedidoTime = (p = {}) => new Date(p.pagoEm || p.criadoEm || p.createdAt || p.created_at || 0).getTime() || 0;
+const sortPedidosRecentes = (list = []) => [...list].sort((a, b) => pedidoTime(b) - pedidoTime(a));
+const normalizeReport = (data) => ({
+  tipo: data?.tipo || "data",
+  resumo: {
+    totalVendas: Number(data?.resumo?.totalVendas || 0),
+    dinheiro: Number(data?.resumo?.dinheiro || 0),
+    pix: Number(data?.resumo?.pix || 0),
+    credito: Number(data?.resumo?.credito || 0),
+    debito: Number(data?.resumo?.debito || 0),
+    online: Number(data?.resumo?.online || 0),
+    outros: Number(data?.resumo?.outros || 0),
+    sangrias: Number(data?.resumo?.sangrias || 0),
+    suprimentos: Number(data?.resumo?.suprimentos || 0),
+    pedidos: Number(data?.resumo?.pedidos || 0),
+    caixas: Number(data?.resumo?.caixas || 0),
+  },
+  linhas: Array.isArray(data?.linhas) ? data.linhas : [],
+  caixas: Array.isArray(data?.caixas) ? data.caixas : [],
+});
 
 const LICENSE_DATE_FIELDS = [
   "dataFimPlano",
@@ -142,7 +189,9 @@ const emptyTipoExtra = () => ({ nome: "", obrigatorio: false, tipoSelecion: "uni
 const emptyItemPreco = () => ({ nome: "", preco: "" });
 const DEFAULT_GARCOM_PERMS = { verPedidos: true, verMesas: true, abrirMesa: true, adicionarItem: true, fecharConta: false, cancelarPedido: false };
 const emptyGarcom = () => ({ nome: "", apelido: "", telefone: "", pin: "1234", permissoes: { ...DEFAULT_GARCOM_PERMS } });
-const emptyOperador = () => ({ nome: "", apelido: "", pin: "", observacao: "", ativo: true });
+const DEFAULT_OPERATOR_PERMS = { abrirCaixa: true, fecharCaixa: true, movimentarCaixa: true, visualizarRelatorios: true, gerenciarOperadores: false };
+const normalizeOperatorPerms = (perms) => ({ ...DEFAULT_OPERATOR_PERMS, ...(perms && typeof perms === "object" ? perms : {}) });
+const emptyOperador = () => ({ nome: "", apelido: "", pin: "", observacao: "", ativo: true, permissoes: { ...DEFAULT_OPERATOR_PERMS } });
 const normalizePerms = (perms) => ({ ...DEFAULT_GARCOM_PERMS, ...(perms && typeof perms === "object" ? perms : {}) });
 
 function Card({ title, icon, children, action, subtitle }) {
@@ -234,6 +283,9 @@ function SearchBox({ value, onChangeText, placeholder }) {
 }
 
 export default function HubRestauranteScreen({ onLogout }) {
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isTablet = width >= 760;
   const refreshDebounceRef = useRef(null);
   const lastDashboardRefreshRef = useRef(0);
   const [loading, setLoading] = useState(true);
@@ -279,6 +331,16 @@ export default function HubRestauranteScreen({ onLogout }) {
   const [botQr, setBotQr] = useState("");
   const [botPolling, setBotPolling] = useState(false);
   const [botStatus, setBotStatus] = useState({ ligado: false, conectado: false, estado: "desconhecido", temQr: false, atualizadoEm: null, erroConexao: "" });
+  const [dashboardResumo, setDashboardResumo] = useState({});
+  const [todayReport, setTodayReport] = useState(() => normalizeReport(null));
+  const [reportData, setReportData] = useState(() => normalizeReport(null));
+  const [reportFilter, setReportFilter] = useState({ tipo: "data", inicio: startOfMonthISO(), fim: toLocalISODate() });
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [networkOnline, setNetworkOnline] = useState(true);
+  const [socketStatus, setSocketStatus] = useState({ connected: false, connecting: false });
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const planoSlug = String(rest?.plano || rest?.planoNome || rest?.assinatura?.plano || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const starterMobile = planoSlug.includes("starter") && planoSlug.includes("mobile");
@@ -293,12 +355,28 @@ export default function HubRestauranteScreen({ onLogout }) {
   const pedidosAReceber = useMemo(() => pedidos.filter(isPedidoAReceberHub), [pedidos]);
 
   const resumo = useMemo(() => {
-    const hoje = new Date().toISOString().slice(0, 10);
-    const pedidosHoje = pedidos.filter((p) => String(p.criadoEm || p.createdAt || "").slice(0, 10) === hoje || pedidos.length <= 20);
-    const totalHoje = pedidosHoje.reduce((acc, p) => acc + Number(p.total || p.valorTotal || 0), 0);
-    const pendentes = pedidos.filter((p) => ["pendente", "preparando", "em preparo", "aceito"].includes(String(p.status || "").toLowerCase())).length;
-    return { totalHoje, pendentes, aReceber: pedidosAReceber.length, mesasOcupadas: mesas.filter((m) => String(m.status).toLowerCase() !== "livre").length };
-  }, [pedidos, pedidosAReceber.length, mesas]);
+    const totalHoje = Number(todayReport?.resumo?.totalVendas || 0);
+    const pedidosConfirmadosHoje = Number(todayReport?.resumo?.pedidos || 0);
+    const pendentes = Number(dashboardResumo?.pedidosPendentes ?? dashboardResumo?.pedidosFila ?? 0);
+    const mesasOcupadas = Number(dashboardResumo?.mesasAbertas ?? dashboardResumo?.mesasOcupadas ?? mesas.filter((m) => String(m.status || "").toLowerCase() !== "livre").length);
+    return {
+      totalHoje,
+      pedidosConfirmadosHoje,
+      ticketMedio: pedidosConfirmadosHoje > 0 ? totalHoje / pedidosConfirmadosHoje : 0,
+      pendentes,
+      aReceber: pedidosAReceber.length,
+      mesasOcupadas,
+    };
+  }, [todayReport, dashboardResumo, pedidosAReceber.length, mesas]);
+
+  const operationStatus = useMemo(() => ({
+    online: networkOnline,
+    socket: !!socketStatus.connected,
+    caixa: caixa?.status === "aberto",
+    loja: rest?.aberto !== false,
+    mercadoPago: !!(rest?.mercadoPago?.conectado || rest?.mercadoPagoConectado || rest?.recipient_id),
+    whatsapp: !!botStatus?.conectado,
+  }), [networkOnline, socketStatus.connected, caixa, rest, botStatus]);
 
   const licenseInfo = useMemo(() => getLicenseInfo(rest), [rest]);
 
@@ -324,48 +402,120 @@ export default function HubRestauranteScreen({ onLogout }) {
     try {
       const s = await getSession();
       setSession(s);
-      const localBlock = getRestauranteAccessBlockMessage(s?.restaurante);
-      if (localBlock) { authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", message: localBlock }); return; }
+      const localBlock = getRestauranteAccessBlockInfo(s?.restaurante);
+      if (localBlock) {
+        authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", ...localBlock });
+        return;
+      }
 
       const me = await api.get("/api/restaurantes/me");
       const r = me.data?.restaurante || me.data || {};
-      const remoteBlock = getRestauranteAccessBlockMessage(r);
-      if (remoteBlock) { authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", message: remoteBlock }); return; }
+      const remoteBlock = getRestauranteAccessBlockInfo(r);
+      if (remoteBlock) {
+        authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", ...remoteBlock });
+        return;
+      }
 
       setRest(r);
       await updateSessionRestaurantePatch(r);
       const id = getId(r) || getId(s?.restaurante);
+      const today = toLocalISODate();
+
+      const safeRequest = async (promise, fallback) => {
+        try {
+          return await promise;
+        } catch (error) {
+          const block = getAuthBlockInfoFromError(error);
+          if (block) throw error;
+          return fallback;
+        }
+      };
+
       const reqs = [
-        api.get(`/api/categorias/${id}`).catch(() => ({ data: [] })),
-        api.get(`/api/produtos/${id}`).catch(() => ({ data: [] })),
-        api.get(`/api/mesas/restaurante/${id}`).catch(() => ({ data: [] })),
-        api.get("/api/garcons").catch(() => ({ data: [] })),
-        api.get("/api/garcons/app/pedidos").catch(() => ({ data: [] })),
-        api.get(`/api/caixa/${id}/atual`).catch(() => ({ data: null })),
-        api.get(`/api/caixa/${id}/operadores`).catch(() => ({ data: [] })),
-        api.get(`/api/mercadopago/status/${id}`).catch(() => ({ data: null })),
-        api.get(`/api/bot/status/${id}`).catch(() => ({ data: null })),
+        safeRequest(api.get(`/api/categorias/${id}`), { data: [] }),
+        safeRequest(api.get(`/api/produtos/${id}`), { data: [] }),
+        safeRequest(api.get(`/api/mesas/restaurante/${id}`), { data: [] }),
+        safeRequest(api.get("/api/garcons"), { data: [] }),
+        safeRequest(api.get(`/api/garcons/app/pedidos?_t=${Date.now()}`), { data: [] }),
+        safeRequest(api.get(`/api/caixa/${id}/atual`), { data: null }),
+        safeRequest(api.get(`/api/caixa/${id}/operadores`), { data: [] }),
+        safeRequest(api.get(`/api/mercadopago/status/${id}`), { data: null }),
+        safeRequest(api.get(`/api/bot/status/${id}`), { data: null }),
+        safeRequest(api.get(`/api/garcons/app/resumo?fresh=1&_t=${Date.now()}`), { data: {} }),
+        safeRequest(api.get(`/api/caixa/${id}/relatorios?tipo=data&inicio=${today}&fim=${today}`), { data: null }),
       ];
-      const [c, p, m, g, pe, cx, op, mp, bot] = await Promise.all(reqs);
+      const [c, p, m, g, pe, cx, op, mp, bot, summary, reportToday] = await Promise.all(reqs);
       setCategorias(Array.isArray(c.data) ? c.data : c.data?.categorias || c.data?.items || []);
       setProdutos(Array.isArray(p.data) ? p.data : p.data?.produtos || p.data?.items || []);
       setMesas(Array.isArray(m.data) ? m.data : m.data?.mesas || m.data?.items || []);
       setGarcons((Array.isArray(g.data) ? g.data : g.data?.garcons || g.data?.items || []).map((item) => ({ ...item, permissoes: normalizePerms(item?.permissoes) })));
-      setPedidos(Array.isArray(pe.data) ? pe.data : pe.data?.pedidos || pe.data?.items || []);
+      setPedidos(sortPedidosRecentes(Array.isArray(pe.data) ? pe.data : pe.data?.pedidos || pe.data?.items || []));
       setCaixa(cx.data?.caixa || cx.data?.sessao || cx.data || null);
-      setOperadoresCaixa(Array.isArray(op.data) ? op.data : op.data?.operadores || op.data?.items || []);
+      setOperadoresCaixa((Array.isArray(op.data) ? op.data : op.data?.operadores || op.data?.items || []).map((item) => ({ ...item, permissoes: normalizeOperatorPerms(item?.permissoes) })));
+      setDashboardResumo(summary.data || {});
+      setTodayReport(normalizeReport(reportToday.data));
       if (mp.data) setRest((prev) => ({ ...prev, mercadoPago: { ...(prev?.mercadoPago || {}), ...mp.data } }));
       if (bot.data) setBotStatus(normalizarBotStatus(bot.data));
+      setLastSyncAt(new Date());
     } catch (e) {
-      const blockMsg = getAuthBlockMessageFromError(e);
-      if (blockMsg) { authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", message: blockMsg }); return; }
-      Alert.alert("Erro", e?.response?.data?.mensagem || e?.response?.data?.message || e.message || "Falha ao carregar o Hub.");
+      const block = getAuthBlockInfoFromError(e);
+      if (block) {
+        authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", ...block });
+        return;
+      }
+      Alert.alert("Não foi possível atualizar", e?.response?.data?.mensagem || e?.response?.data?.message || e.message || "Falha ao carregar o Hub.");
     } finally {
       if (silent) setRefreshing(false); else setLoading(false);
     }
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const carregarRelatorio = useCallback(async (nextFilter = reportFilter) => {
+    if (!restauranteId) return;
+    const inicio = String(nextFilter?.inicio || "");
+    const fim = String(nextFilter?.fim || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(inicio) || !/^\d{4}-\d{2}-\d{2}$/.test(fim)) {
+      setReportError("Informe o período no formato AAAA-MM-DD.");
+      return;
+    }
+    if (inicio > fim) {
+      setReportError("A data inicial não pode ser maior que a data final.");
+      return;
+    }
+
+    setReportLoading(true);
+    setReportError("");
+    try {
+      const tipo = ["data", "caixa", "operador"].includes(nextFilter?.tipo) ? nextFilter.tipo : "data";
+      const { data } = await api.get(`/api/caixa/${restauranteId}/relatorios?tipo=${tipo}&inicio=${inicio}&fim=${fim}`);
+      setReportData(normalizeReport(data));
+    } catch (error) {
+      const block = getAuthBlockInfoFromError(error);
+      if (block) {
+        authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", ...block });
+        return;
+      }
+      setReportError(error?.response?.data?.message || error?.response?.data?.mensagem || "Não foi possível gerar o relatório.");
+    } finally {
+      setReportLoading(false);
+    }
+  }, [restauranteId, reportFilter]);
+
+  useEffect(() => {
+    const unsubscribeNet = NetInfo.addEventListener((state) => {
+      setNetworkOnline(state.isConnected !== false && state.isInternetReachable !== false);
+    });
+    const unsubscribeSocket = onSocketState(setSocketStatus);
+    return () => {
+      unsubscribeNet?.();
+      unsubscribeSocket?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (tab === "relatorios" && restauranteId) carregarRelatorio();
+  }, [tab, restauranteId, carregarRelatorio]);
 
   const refreshDashboardNow = useCallback(({ force = false, delay = 0 } = {}) => {
     if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
@@ -433,11 +583,22 @@ export default function HubRestauranteScreen({ onLogout }) {
       "caixaAberto",
       "caixaFechado",
     ];
+    const acessoEncerrado = (payload = {}) => {
+      const code = String(payload?.code || payload?.codigo || "").toUpperCase();
+      const reason = code === "LICENCA_VENCIDA" ? "expired" : "blocked";
+      const message = payload?.message || payload?.mensagem || (reason === "expired"
+        ? "Licença vencida. Regularize o plano para continuar usando o Movyo."
+        : "Restaurante bloqueado. Entre em contato com o suporte Movyo.");
+      authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", code, reason, message });
+    };
+    const eventosAcesso = ["restauranteBloqueado", "licencaVencida", "acessoEncerrado", "forceLogout"];
     eventos.forEach((ev) => socket?.on?.(ev, atualizar));
+    eventosAcesso.forEach((ev) => socket?.on?.(ev, acessoEncerrado));
     return () => {
       if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
       const current = getSocket();
       eventos.forEach((ev) => current?.off?.(ev, atualizar));
+      eventosAcesso.forEach((ev) => current?.off?.(ev, acessoEncerrado));
     };
   }, [restauranteId, refreshDashboardNow]);
 
@@ -446,6 +607,10 @@ export default function HubRestauranteScreen({ onLogout }) {
     const id = setInterval(() => refreshDashboardNow(), 20000);
     return () => clearInterval(id);
   }, [tab, refreshDashboardNow]);
+
+  useEffect(() => {
+    if (socketStatus.connected) refreshDashboardNow({ delay: 300 });
+  }, [socketStatus.connected, refreshDashboardNow]);
 
 
   useEffect(() => {
@@ -627,11 +792,11 @@ export default function HubRestauranteScreen({ onLogout }) {
   ]);
 
   const limparOperador = () => { setOperadorForm(emptyOperador()); setOperadorEditandoId(null); };
-  const iniciarEdicaoOperador = (op) => { setOperadorEditandoId(getId(op)); setOperadorForm({ nome: op.nome || "", apelido: op.apelido || "", pin: "", observacao: op.observacao || "", ativo: op.ativo !== false }); };
+  const iniciarEdicaoOperador = (op) => { setOperadorEditandoId(getId(op)); setOperadorForm({ nome: op.nome || "", apelido: op.apelido || "", pin: "", observacao: op.observacao || "", ativo: op.ativo !== false, permissoes: normalizeOperatorPerms(op.permissoes) }); };
   const salvarOperador = async () => {
     if (!String(operadorForm.nome || "").trim()) return Alert.alert("Ops", "Informe o nome do operador.");
     await runAction(operadorEditandoId ? "Salvando operador..." : "Cadastrando operador...", async () => {
-      const payload = { nome: operadorForm.nome.trim(), apelido: operadorForm.apelido?.trim() || null, observacao: operadorForm.observacao || "", ativo: operadorForm.ativo !== false };
+      const payload = { nome: operadorForm.nome.trim(), apelido: operadorForm.apelido?.trim() || null, observacao: operadorForm.observacao || "", ativo: operadorForm.ativo !== false, permissoes: normalizeOperatorPerms(operadorForm.permissoes) };
       if (!operadorEditandoId || String(operadorForm.pin || "").trim()) payload.pin = String(operadorForm.pin || "").trim();
       if (operadorEditandoId) await api.put(`/api/caixa/${restauranteId}/operadores/${operadorEditandoId}`, payload); else await api.post(`/api/caixa/${restauranteId}/operadores`, payload);
       limparOperador();
@@ -663,6 +828,20 @@ export default function HubRestauranteScreen({ onLogout }) {
     { text: "Cancelar", style: "cancel" },
     { text: "Excluir", style: "destructive", onPress: async () => runAction("Excluindo mesa...", async () => { await api.delete(`/api/mesas/${getId(mesa)}`); setMesas((prev) => prev.filter((m) => getId(m) !== getId(mesa))); }).catch((e) => Alert.alert("Erro", e?.response?.data?.message || e?.response?.data?.mensagem || e.message)) },
   ]);
+
+  const atualizarStatusPedidoHub = async (pedido, novoStatus) => {
+    const pedidoId = getId(pedido);
+    if (!pedidoId) return;
+    const labels = {
+      em_producao: "Aceitando pedido...",
+      pronto: "Marcando como pronto...",
+      entregue: "Finalizando pedido...",
+    };
+    await runAction(labels[novoStatus] || "Atualizando pedido...", async () => {
+      await api.put(`/api/pedidos/status/${pedidoId}`, { status: novoStatus, restauranteId });
+      await load({ silent: true });
+    }).catch((e) => Alert.alert("Erro", e?.response?.data?.message || e?.response?.data?.mensagem || e?.response?.data?.erro || e.message));
+  };
 
   const atualizarStatusMercadoPago = async () => {
     if (!restauranteId) return;
@@ -833,125 +1012,403 @@ export default function HubRestauranteScreen({ onLogout }) {
     ]);
   };
 
-  const tabs = [["dashboard", "Início", "grid-outline"], ["a_receber", "A Receber", "notifications-outline"], ["categorias", "Categorias", "albums-outline"], ["produtos", "Produtos", "fast-food-outline"], ["mesas", "Mesas", "restaurant-outline"], ["pedidos", "Pedidos", "receipt-outline"], ["caixa", "Caixa", "cash-outline"], ["garcons", "Garçons", "people-outline"], ["config", "Config", "settings-outline"]];
-  const quickTabs = tabs.slice(0, 5);
+  const tabs = [
+    { key: "dashboard", label: "Início", icon: "grid-outline" },
+    { key: "a_receber", label: "A Receber", icon: "notifications-outline", badge: resumo.aReceber },
+    { key: "pedidos", label: "Pedidos", icon: "receipt-outline" },
+    { key: "caixa", label: "Caixa", icon: "cash-outline" },
+    { key: "relatorios", label: "Relatórios", icon: "analytics-outline" },
+    { key: "categorias", label: "Categorias", icon: "albums-outline" },
+    { key: "produtos", label: "Produtos", icon: "fast-food-outline" },
+    { key: "mesas", label: "Mesas", icon: "restaurant-outline" },
+    { key: "garcons", label: "Garçons", icon: "people-outline" },
+    { key: "config", label: "Configurações", icon: "settings-outline" },
+  ];
+  const mainTabs = tabs.filter((item) => ["dashboard", "a_receber", "pedidos", "caixa"].includes(item.key));
+  const moreTabs = tabs.filter((item) => !["dashboard", "a_receber", "pedidos", "caixa"].includes(item.key));
+  const currentTab = tabs.find((item) => item.key === tab) || tabs[0];
+  const isMoreSelected = moreTabs.some((item) => item.key === tab);
+  const selectTab = (key) => {
+    setMoreOpen(false);
+    setTab(key);
+  };
 
   if (loading && !restauranteId) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#ff3b8a" />
-        <Text style={styles.loading}>Carregando Movyo Hub...</Text>
-      </View>
+      <LinearGradient colors={["#111827", "#251329", "#ff3b8a"]} style={styles.center}>
+        <View style={styles.loadingLogo}><Text style={styles.loadingLogoText}>M</Text></View>
+        <ActivityIndicator size="large" color="#fff" />
+        <Text style={[styles.loading, { color: "#fff" }]}>Carregando Movyo Hub...</Text>
+      </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.page}>
-      {actionLabel || refreshing ? <View style={styles.inlineLoader}><ActivityIndicator size="small" color="#ff3b8a" /><Text style={styles.inlineLoaderText}>{actionLabel || "Atualizando dados..."}</Text></View> : null}
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.kicker}>MOVYO HUB</Text>
-            <Text style={styles.logo}>{rest?.nome || "Restaurante"}</Text>
-            <Text style={styles.sub}>{rest?.plano || "Painel premium"} • gestão pelo celular</Text>
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="#111827" />
+      <SafeAreaView style={styles.page} edges={["top"]}>
+        {actionLabel || refreshing ? (
+          <View style={styles.inlineLoader}>
+            <ActivityIndicator size="small" color="#ff3b8a" />
+            <Text style={styles.inlineLoaderText}>{actionLabel || "Sincronizando dados..."}</Text>
           </View>
-          <Pressable onPress={logout} style={styles.logout}><Ionicons name="log-out-outline" size={21} color="#fff" /></Pressable>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickScroll}>
-          {quickTabs.map((t) => <Pressable key={t[0]} onPress={() => setTab(t[0])} style={[styles.quickAction, tab === t[0] && styles.quickActionActive]}><Ionicons name={t[2]} size={20} color={tab === t[0] ? "#fff" : "#ff3b8a"} /><Text style={[styles.quickText, tab === t[0] && styles.quickTextActive]}>{t[1]}</Text></Pressable>)}
+        ) : null}
+
+        <LinearGradient colors={["#111827", "#251329", "#ff3b8a"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+          <View style={[styles.heroTop, isTablet && styles.heroTopTablet]}>
+            <View style={styles.brandLine}>
+              <View style={styles.heroMark}><Text style={styles.heroMarkText}>M</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.kicker}>MOVYO HUB</Text>
+                <Text style={styles.logo} numberOfLines={1}>{rest?.nome || "Restaurante"}</Text>
+                <Text style={styles.sub}>{rest?.plano || "Plano Movyo"} • gestão mobile</Text>
+              </View>
+            </View>
+            <Pressable onPress={logout} style={({ pressed }) => [styles.logout, pressed && styles.pressed]} accessibilityLabel="Sair da conta">
+              <Ionicons name="log-out-outline" size={21} color="#fff" />
+            </Pressable>
+          </View>
+
+          <View style={styles.heroStatusRow}>
+            <StatusPill ok={networkOnline} icon={networkOnline ? "cloud-done-outline" : "cloud-offline-outline"} label={networkOnline ? "Online" : "Sem internet"} />
+            <StatusPill ok={socketStatus.connected} pending={socketStatus.connecting} icon="radio-outline" label={socketStatus.connected ? "Tempo real" : socketStatus.connecting ? "Reconectando" : "Socket offline"} />
+            <StatusPill ok={caixa?.status === "aberto"} icon="cash-outline" label={caixa?.status === "aberto" ? "Caixa aberto" : "Caixa fechado"} />
+          </View>
+        </LinearGradient>
+
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={[styles.contentContainer, { paddingBottom: 112 + Math.max(insets.bottom, 8) }, isTablet && styles.contentContainerTablet]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load({ silent: true })} tintColor="#ff3b8a" colors={["#ff3b8a"]} />}
+        >
+          <View style={styles.sectionHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionKicker}>Painel do restaurante</Text>
+              <Text style={styles.sectionTitle}>{currentTab.label}</Text>
+              <Text style={styles.syncText}>Atualizado {lastSyncAt ? formatDateTimeBR(lastSyncAt) : "agora"}</Text>
+            </View>
+            <Pressable onPress={() => load({ silent: true })} style={({ pressed }) => [styles.refreshButton, pressed && styles.pressed]} accessibilityLabel="Atualizar dados">
+              <Ionicons name="refresh-outline" size={19} color="#ff3b8a" />
+            </Pressable>
+          </View>
+
+          {tab === "dashboard" && <>
+            <LicenseStatusCard info={licenseInfo} />
+            <View style={styles.metricGrid}>
+              <Metric label="Faturamento hoje" value={moeda(resumo.totalHoje)} icon="trending-up-outline" tone="pink" />
+              <Metric label="Ticket médio" value={moeda(resumo.ticketMedio)} icon="stats-chart-outline" tone="orange" />
+              <Metric label="Pendentes" value={resumo.pendentes} icon="time-outline" tone="purple" />
+              <Metric label="Mesas ocupadas" value={resumo.mesasOcupadas} icon="restaurant-outline" tone="green" />
+            </View>
+
+            <FinancialOverview report={todayReport} />
+            <OperationalOverview status={operationStatus} counts={{ categorias: categorias.length, produtos: produtos.length, mesas: mesas.length, garcons: garcons.length }} />
+
+            <Card title="Atalhos operacionais" icon="flash-outline" subtitle="Acesse as áreas mais usadas sem procurar no menu.">
+              <View style={styles.grid2}>
+                <DashboardTile label="A Receber" subtitle={`${resumo.aReceber} pedido(s)`} icon="notifications-outline" attention={resumo.aReceber > 0} onPress={() => selectTab("a_receber")} />
+                <DashboardTile label="Relatórios" subtitle="Caixa e vendas" icon="analytics-outline" onPress={() => selectTab("relatorios")} />
+                <DashboardTile label="Produtos" subtitle={`${produtos.length} cadastrados`} icon="fast-food-outline" onPress={() => selectTab("produtos")} />
+                <DashboardTile label="Mesas" subtitle={`${mesas.length} cadastradas`} icon="restaurant-outline" onPress={() => selectTab("mesas")} />
+                <DashboardTile label="Garçons" subtitle={`${garcons.length} acessos`} icon="people-outline" onPress={() => selectTab("garcons")} />
+                <DashboardTile label="Configurações" subtitle="Integrações e loja" icon="settings-outline" onPress={() => selectTab("config")} />
+              </View>
+            </Card>
+
+            <OrdersHubView title="Pedidos recentes" pedidos={pedidos.slice(0, 5)} onStatusChange={atualizarStatusPedidoHub} compact />
+          </>}
+
+          {tab === "categorias" && <CategoriasView categoriaForm={categoriaForm} setCategoriaForm={setCategoriaForm} setCategoriaTipo={setCategoriaTipo} tipoExtraForm={tipoExtraForm} setTipoExtraForm={setTipoExtraForm} tipoExtraItem={tipoExtraItem} setTipoExtraItem={setTipoExtraItem} adicionarItemAoTipoExtra={adicionarItemAoTipoExtra} adicionarTipoExtraCategoria={adicionarTipoExtraCategoria} removerTipoExtraCategoria={removerTipoExtraCategoria} salvarCategoria={salvarCategoria} limparCategoria={limparCategoria} categoriaEditandoId={categoriaEditandoId} categorias={categorias} categoriasFiltradas={categoriasFiltradas} categoriaBusca={categoriaBusca} setCategoriaBusca={setCategoriaBusca} iniciarEdicaoCategoria={iniciarEdicaoCategoria} deletarCategoria={deletarCategoria} />}
+
+          {tab === "produtos" && <ProdutosView produtoForm={produtoForm} setProdutoForm={setProdutoForm} produtoEditandoId={produtoEditandoId} categorias={categorias} categoriaSelecionada={categoriaSelecionada} tempInputs={tempInputs} setTempInputs={setTempInputs} adicionarItemProduto={adicionarItemProduto} removerItemProduto={removerItemProduto} adicionarExtraProduto={adicionarExtraProduto} removerExtraProduto={removerExtraProduto} salvarProduto={salvarProduto} limparProduto={limparProduto} produtos={produtos} produtosFiltrados={produtosFiltrados} produtoBusca={produtoBusca} setProdutoBusca={setProdutoBusca} produtoFiltro={produtoFiltro} setProdutoFiltro={setProdutoFiltro} iniciarEdicaoProduto={iniciarEdicaoProduto} deletarProduto={deletarProduto} />}
+
+          {tab === "mesas" && <>
+            <Card title="Criar mesa individual" icon="restaurant-outline" subtitle="Criação rápida sem sair da tela de mesas.">
+              <Field label="Número da mesa" value={mesaNumero} onChangeText={setMesaNumero} />
+              <Button title="Criar mesa" icon="add-outline" onPress={criarMesa} disabled={!!actionLabel} />
+            </Card>
+            <Card title="Criar mesas em lote" icon="copy-outline">
+              <View style={styles.row}><View style={{ flex: 1 }}><Field label="Início" value={loteInicio} onChangeText={setLoteInicio} keyboardType="number-pad" /></View><View style={{ width: 10 }} /><View style={{ flex: 1 }}><Field label="Fim" value={loteFim} onChangeText={setLoteFim} keyboardType="number-pad" /></View></View>
+              <Button title="Criar lote" icon="layers-outline" onPress={criarLote} disabled={!!actionLabel} />
+            </Card>
+            <MesasHubList mesas={mesas} onDelete={deletarMesa} />
+          </>}
+
+          {tab === "a_receber" && <OrdersHubView title="Pedidos A Receber" subtitle="Pedidos confirmados pela vitrine aguardando aceite." pedidos={pedidosAReceber} onStatusChange={atualizarStatusPedidoHub} aReceber />}
+          {tab === "pedidos" && <OrdersHubView title="Controle de pedidos" subtitle="Mais novos primeiro, com status e origem." pedidos={pedidos} onStatusChange={atualizarStatusPedidoHub} />}
+
+          {tab === "relatorios" && <ReportsView filter={reportFilter} setFilter={setReportFilter} data={reportData} loading={reportLoading} error={reportError} onLoad={carregarRelatorio} />}
+
+          {tab === "caixa" && <>
+            <Card title="Abertura e fechamento" icon="cash-outline" subtitle="O fechamento exige o PIN do operador que abriu o caixa quando houver PIN cadastrado.">
+              {caixa?.status === "aberto" ? <>
+                <Pill active>Caixa aberto</Pill>
+                <Text style={styles.text}>Operador: {caixa.operadorNome || operadorFechamento?.nome || "—"}</Text>
+                <Text style={styles.text}>Saldo inicial: {moeda(caixa.saldoInicial)}</Text>
+                <Text style={styles.text}>Dinheiro: {moeda(caixa.dinheiro || caixa.totalDinheiro)}</Text>
+                <Text style={styles.text}>Pix: {moeda(caixa.pix || caixa.totalPix)}</Text>
+                <Text style={styles.text}>Cartão: {moeda(caixa.cartao || caixa.totalCartao || Number(caixa.credito || 0) + Number(caixa.debito || 0))}</Text>
+                {fechamentoExigePin ? <Field label="PIN do operador" value={caixaForm.pin} onChangeText={(v) => setCaixaForm({ ...caixaForm, pin: v.replace(/\D/g, "").slice(0, 8) })} keyboardType="number-pad" secureTextEntry /> : null}
+                <Field label="Saldo final informado" value={caixaForm.saldoFinalInformado} onChangeText={(v) => setCaixaForm({ ...caixaForm, saldoFinalInformado: v })} keyboardType="decimal-pad" />
+                <Field label="Observação" value={caixaForm.observacao} onChangeText={(v) => setCaixaForm({ ...caixaForm, observacao: v })} multiline />
+                <Button title="Fechar caixa" variant="danger" icon="lock-closed-outline" onPress={fecharCaixa} />
+              </> : <>
+                <Pill danger>Caixa fechado</Pill>
+                <OperadorPicker operadores={operadoresAtivos} value={caixaForm.operadorId} onChange={(id) => setCaixaForm({ ...caixaForm, operadorId: id, pin: "" })} />
+                {aberturaExigePin ? <Field label="PIN do operador" value={caixaForm.pin} onChangeText={(v) => setCaixaForm({ ...caixaForm, pin: v.replace(/\D/g, "").slice(0, 8) })} keyboardType="number-pad" secureTextEntry /> : null}
+                <Field label="Saldo inicial" value={caixaForm.saldoInicial} onChangeText={(v) => setCaixaForm({ ...caixaForm, saldoInicial: v })} keyboardType="decimal-pad" />
+                <Button title="Abrir caixa" icon="lock-open-outline" onPress={abrirCaixa} />
+              </>}
+            </Card>
+            <OperadoresCaixaView operadorForm={operadorForm} setOperadorForm={setOperadorForm} operadorEditandoId={operadorEditandoId} operadores={operadoresCaixa} salvarOperador={salvarOperador} limparOperador={limparOperador} iniciarEdicaoOperador={iniciarEdicaoOperador} alternarOperador={alternarOperador} />
+          </>}
+
+          {tab === "garcons" && <GarconsHubView garcomForm={garcomForm} setGarcomForm={setGarcomForm} garcomEditandoId={garcomEditandoId} setPermGarcom={setPermGarcom} limparGarcom={limparGarcom} criarGarcom={criarGarcom} garcomLimitReached={garcomLimitReached} actionLabel={actionLabel} starterMobile={starterMobile} garcons={garcons} iniciarEdicaoGarcom={iniciarEdicaoGarcom} alternarGarcom={alternarGarcom} removerGarcom={removerGarcom} />}
+
+          {tab === "config" && <>
+            <Card title="Geral" icon="business-outline" subtitle="Dados públicos e operação da vitrine.">
+              <Field label="Nome" value={rest.nome} onChangeText={(v) => setRest({ ...rest, nome: v })} />
+              <Field label="Telefone" value={rest.telefone} onChangeText={(v) => setRest({ ...rest, telefone: v })} />
+              <Field label="Endereço" value={rest.endereco || rest.enderecoCompleto} onChangeText={(v) => setRest({ ...rest, endereco: v, enderecoCompleto: v })} multiline />
+              <ToggleLine label="Loja aberta" value={rest.aberto !== false} onValueChange={(v) => setRest({ ...rest, aberto: v })} hint="Controla a disponibilidade da vitrine para novos pedidos." />
+              <Button title={saving ? "Salvando..." : "Salvar configurações"} icon="save-outline" onPress={salvarConfig} disabled={saving || !!actionLabel} />
+            </Card>
+            <MercadoPagoHubView rest={rest} mpLoading={mpLoading} conectar={conectarMercadoPago} atualizar={atualizarStatusMercadoPago} desconectar={desconectarMercadoPago} toggleCartao={toggleCartaoVitrine} />
+            <WhatsAppBotHubView status={botStatus} qrImageUrl={botQrImageUrl} loading={botLoading} conectar={conectarBot} mostrarQr={buscarQrBot} atualizar={() => carregarStatusBot({ alertar: true })} desconectar={desconectarBot} resetar={resetarBot} />
+          </>}
         </ScrollView>
+
+        <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+          {mainTabs.map((item) => (
+            <BottomNavItem key={item.key} item={item} active={tab === item.key} onPress={() => selectTab(item.key)} />
+          ))}
+          <BottomNavItem item={{ key: "mais", label: "Mais", icon: "apps-outline" }} active={isMoreSelected || moreOpen} onPress={() => setMoreOpen(true)} />
+        </View>
+
+        <MoreMenuModal visible={moreOpen} onClose={() => setMoreOpen(false)} items={moreTabs} activeKey={tab} onSelect={selectTab} />
+      </SafeAreaView>
+    </>
+  );
+
+}
+
+
+function StatusPill({ ok, pending = false, icon, label }) {
+  return (
+    <View style={[styles.statusPill, ok && styles.statusPillOk, pending && styles.statusPillPending]}>
+      <Ionicons name={icon} size={14} color={ok ? "#d1fae5" : pending ? "#fef3c7" : "#fecdd3"} />
+      <Text style={[styles.statusPillText, ok && styles.statusPillTextOk, pending && styles.statusPillTextPending]}>{label}</Text>
+    </View>
+  );
+}
+
+function FinancialOverview({ report }) {
+  const r = report?.resumo || {};
+  const payments = [
+    ["Dinheiro", r.dinheiro, "cash-outline"],
+    ["Pix", r.pix, "qr-code-outline"],
+    ["Crédito", r.credito, "card-outline"],
+    ["Débito", r.debito, "card-outline"],
+    ["Online", r.online, "globe-outline"],
+    ["Outros", r.outros, "ellipsis-horizontal-outline"],
+  ].filter(([, value]) => Number(value || 0) > 0);
+  const total = Number(r.totalVendas || 0);
+
+  return (
+    <Card title="Resumo financeiro de hoje" icon="wallet-outline" subtitle="Somente vendas confirmadas pela regra oficial da API.">
+      <View style={styles.financialHero}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.financialEyebrow}>TOTAL CONFIRMADO</Text>
+          <Text style={styles.financialTotal}>{moeda(total)}</Text>
+          <Text style={styles.financialCaption}>{Number(r.pedidos || 0)} pedido(s) • {Number(r.caixas || 0)} caixa(s)</Text>
+        </View>
+        <View style={styles.financialHeroIcon}><Ionicons name="trending-up-outline" size={26} color="#fff" /></View>
+      </View>
+      {payments.length ? (
+        <View style={styles.paymentGrid}>
+          {payments.map(([label, value, icon]) => (
+            <View key={label} style={styles.paymentItem}>
+              <View style={styles.paymentIcon}><Ionicons name={icon} size={16} color="#ff3b8a" /></View>
+              <View style={{ flex: 1 }}><Text style={styles.paymentLabel}>{label}</Text><Text style={styles.paymentValue}>{moeda(value)}</Text></View>
+            </View>
+          ))}
+        </View>
+      ) : <Text style={styles.infoBox}>Ainda não há vendas confirmadas hoje.</Text>}
+    </Card>
+  );
+}
+
+function OperationalOverview({ status, counts }) {
+  const rows = [
+    ["Internet", status.online, "cloud-done-outline", status.online ? "Conectada" : "Indisponível"],
+    ["Tempo real", status.socket, "radio-outline", status.socket ? "Ativo" : "Reconectando"],
+    ["Caixa", status.caixa, "cash-outline", status.caixa ? "Aberto" : "Fechado"],
+    ["Vitrine", status.loja, "storefront-outline", status.loja ? "Aberta" : "Fechada"],
+    ["Mercado Pago", status.mercadoPago, "card-outline", status.mercadoPago ? "Conectado" : "Pendente"],
+    ["WhatsApp", status.whatsapp, "logo-whatsapp", status.whatsapp ? "Conectado" : "Pendente"],
+  ];
+  return (
+    <Card title="Saúde da operação" icon="pulse-outline" subtitle="Conexões e recursos essenciais do restaurante.">
+      <View style={styles.operationGrid}>
+        {rows.map(([label, ok, icon, value]) => (
+          <View key={label} style={styles.operationItem}>
+            <View style={[styles.operationDot, ok && styles.operationDotOk]}><Ionicons name={icon} size={17} color={ok ? "#16a34a" : "#e11d48"} /></View>
+            <View style={{ flex: 1 }}><Text style={styles.operationLabel}>{label}</Text><Text style={[styles.operationValue, ok && styles.operationValueOk]}>{value}</Text></View>
+          </View>
+        ))}
+      </View>
+      <View style={styles.inventoryStrip}>
+        <Text style={styles.inventoryText}>{counts.categorias} categorias</Text><View style={styles.inventoryDivider} />
+        <Text style={styles.inventoryText}>{counts.produtos} produtos</Text><View style={styles.inventoryDivider} />
+        <Text style={styles.inventoryText}>{counts.mesas} mesas</Text><View style={styles.inventoryDivider} />
+        <Text style={styles.inventoryText}>{counts.garcons} garçons</Text>
+      </View>
+    </Card>
+  );
+}
+
+function DashboardTile({ label, subtitle, icon, attention = false, onPress }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.dashboardTile, attention && styles.dashboardTileAttention, pressed && styles.pressed]}>
+      <View style={[styles.dashboardTileIcon, attention && styles.dashboardTileIconAttention]}><Ionicons name={icon} size={22} color={attention ? "#fff" : "#ff3b8a"} /></View>
+      <Text style={styles.dashboardTileTitle}>{label}</Text>
+      <Text style={styles.dashboardTileSubtitle}>{subtitle}</Text>
+      <Ionicons name="chevron-forward-outline" size={16} color="#94a3b8" style={styles.dashboardTileArrow} />
+    </Pressable>
+  );
+}
+
+const ORDER_STATUS_META = {
+  novo: ["Novo", "#be123c", "#fff1f2"],
+  pendente: ["Pendente", "#a16207", "#fefce8"],
+  recebido: ["Recebido", "#7e22ce", "#faf5ff"],
+  pago: ["Pago", "#0369a1", "#f0f9ff"],
+  em_producao: ["Em produção", "#c2410c", "#fff7ed"],
+  "em produção": ["Em produção", "#c2410c", "#fff7ed"],
+  pronto: ["Pronto", "#047857", "#ecfdf5"],
+  em_entrega: ["Em entrega", "#1d4ed8", "#eff6ff"],
+  entregue: ["Entregue", "#166534", "#f0fdf4"],
+  cancelado: ["Cancelado", "#b91c1c", "#fef2f2"],
+};
+
+function OrderStatusBadge({ status }) {
+  const key = normalizeText(status).replace(/-/g, "_");
+  const [label, color, bg] = ORDER_STATUS_META[key] || [status || "Sem status", "#475569", "#f1f5f9"];
+  return <View style={[styles.orderStatus, { backgroundColor: bg }]}><Text style={[styles.orderStatusText, { color }]}>{label}</Text></View>;
+}
+
+function OrdersHubView({ title, subtitle, pedidos = [], onStatusChange, aReceber = false, compact = false }) {
+  const list = compact ? pedidos.slice(0, 5) : pedidos;
+  return (
+    <Card title={title} icon={aReceber ? "notifications-outline" : "receipt-outline"} subtitle={subtitle || `${list.length} pedido(s) exibido(s)`}>
+      {list.length ? list.map((pedido) => {
+        const status = normalizeText(pedido.status || pedido.statusPedido).replace(/-/g, "_");
+        const total = Number(pedido.total || pedido.valorTotal || pedido.totalPedido || 0);
+        const customer = pedido?.cliente?.nome || pedido.nomeCliente || pedido.clienteNome || "Cliente";
+        const origem = pedido.origem || pedido.tipo || pedido.canal || "restaurante";
+        const nextActions = [];
+        if (["", "novo", "pendente", "recebido", "pago", "aguardando", "aguardando_confirmacao"].includes(status)) nextActions.push(["Aceitar", "em_producao", "checkmark-circle-outline"]);
+        if (["em_producao", "em produção"].includes(status)) nextActions.push(["Pronto", "pronto", "checkmark-done-outline"]);
+        if (["pronto", "em_entrega"].includes(status)) nextActions.push(["Entregue", "entregue", "flag-outline"]);
+        return (
+          <View key={getId(pedido) || getPedidoCodigoHub(pedido)} style={styles.orderCard}>
+            <View style={styles.orderTop}>
+              <View style={styles.orderNumberWrap}><Text style={styles.orderNumber}>#{getPedidoCodigoHub(pedido)}</Text><Text style={styles.orderTime}>{formatDateTimeBR(pedido.pagoEm || pedido.criadoEm || pedido.createdAt)}</Text></View>
+              <OrderStatusBadge status={status} />
+            </View>
+            <Text style={styles.orderCustomer} numberOfLines={1}>{customer}</Text>
+            <View style={styles.orderMetaRow}>
+              <View style={styles.orderMeta}><Ionicons name="navigate-outline" size={14} color="#64748b" /><Text style={styles.orderMetaText}>{String(origem).replace(/_/g, " ")}</Text></View>
+              <Text style={styles.orderTotal}>{moeda(total)}</Text>
+            </View>
+            {nextActions.length ? <View style={styles.orderActions}>{nextActions.map(([label, nextStatus, icon]) => <MiniButton key={nextStatus} title={label} icon={icon} onPress={() => onStatusChange?.(pedido, nextStatus)} />)}</View> : null}
+          </View>
+        );
+      }) : <EmptyState icon={aReceber ? "notifications-off-outline" : "receipt-outline"} text={aReceber ? "Nenhum pedido aguardando aceite." : "Nenhum pedido encontrado."} />}
+    </Card>
+  );
+}
+
+function ReportSummaryCard({ label, value, icon, accent = false }) {
+  return <View style={[styles.reportSummaryCard, accent && styles.reportSummaryCardAccent]}><Ionicons name={icon} size={18} color={accent ? "#fff" : "#ff3b8a"} /><Text style={[styles.reportSummaryLabel, accent && styles.reportSummaryLabelAccent]}>{label}</Text><Text style={[styles.reportSummaryValue, accent && styles.reportSummaryValueAccent]}>{value}</Text></View>;
+}
+
+function ReportsView({ filter, setFilter, data, loading, error, onLoad }) {
+  const r = data?.resumo || {};
+  return (
+    <>
+      <Card title="Filtros do relatório" icon="options-outline" subtitle="Dados oficiais do caixa e das vendas confirmadas.">
+        <Text style={styles.label}>Agrupar por</Text>
+        <View style={styles.chipRow}>
+          {[['data','Data'],['caixa','Caixa'],['operador','Operador']].map(([value,label]) => <OptionChip key={value} label={label} active={filter.tipo === value} onPress={() => setFilter({ ...filter, tipo: value })} />)}
+        </View>
+        <View style={styles.responsiveRow}>
+          <View style={styles.responsiveField}><Field label="Data inicial (AAAA-MM-DD)" value={filter.inicio} onChangeText={(v) => setFilter({ ...filter, inicio: v })} /></View>
+          <View style={styles.responsiveField}><Field label="Data final (AAAA-MM-DD)" value={filter.fim} onChangeText={(v) => setFilter({ ...filter, fim: v })} /></View>
+        </View>
+        {error ? <Text style={styles.errorBox}>{error}</Text> : null}
+        <Button title={loading ? "Gerando relatório..." : "Gerar relatório"} icon="analytics-outline" onPress={() => onLoad(filter)} disabled={loading} />
+      </Card>
+
+      <View style={styles.reportSummaryGrid}>
+        <ReportSummaryCard label="Faturamento" value={moeda(r.totalVendas)} icon="trending-up-outline" accent />
+        <ReportSummaryCard label="Pedidos" value={Number(r.pedidos || 0)} icon="receipt-outline" />
+        <ReportSummaryCard label="Caixas" value={Number(r.caixas || 0)} icon="cash-outline" />
+        <ReportSummaryCard label="Ticket médio" value={moeda(Number(r.pedidos || 0) ? Number(r.totalVendas || 0) / Number(r.pedidos || 1) : 0)} icon="stats-chart-outline" />
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 112 }}>
-        <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionKicker}>Painel do restaurante</Text>
-            <Text style={styles.sectionTitle}>{tabs.find((t) => t[0] === tab)?.[1] || "Início"}</Text>
-          </View>
-          <MiniButton title="Atualizar" icon="refresh-outline" onPress={() => load({ silent: true })} />
+      <Card title="Formas de pagamento" icon="card-outline" subtitle="Composição do faturamento confirmado no período.">
+        <View style={styles.paymentGrid}>
+          {[['Dinheiro',r.dinheiro,'cash-outline'],['Pix',r.pix,'qr-code-outline'],['Crédito',r.credito,'card-outline'],['Débito',r.debito,'card-outline'],['Online',r.online,'globe-outline'],['Outros',r.outros,'ellipsis-horizontal-outline']].map(([label,value,icon]) => (
+            <View key={label} style={styles.paymentItem}><View style={styles.paymentIcon}><Ionicons name={icon} size={16} color="#ff3b8a" /></View><View style={{flex:1}}><Text style={styles.paymentLabel}>{label}</Text><Text style={styles.paymentValue}>{moeda(value)}</Text></View></View>
+          ))}
         </View>
+        {(Number(r.sangrias || 0) > 0 || Number(r.suprimentos || 0) > 0) ? <View style={styles.cashMovementRow}><Text style={styles.cashMovementText}>Suprimentos: {moeda(r.suprimentos)}</Text><Text style={[styles.cashMovementText,{color:'#be123c'}]}>Sangrias: {moeda(r.sangrias)}</Text></View> : null}
+      </Card>
 
-        {tab === "dashboard" && <>
-          <LicenseStatusCard info={licenseInfo} />
-          <View style={styles.metrics}>
-            <Metric label="Hoje" value={moeda(resumo.totalHoje)} icon="cash-outline" />
-            <Metric label="Pendentes" value={resumo.pendentes} icon="time-outline" />
-            <Metric label="A Receber" value={resumo.aReceber} icon="notifications-outline" />
-            <Metric label="Mesas ocupadas" value={resumo.mesasOcupadas} icon="restaurant-outline" />
+      <Card title="Detalhamento" icon="list-outline" subtitle={`${data?.linhas?.length || 0} agrupamento(s) no período.`}>
+        {loading ? <ActivityIndicator color="#ff3b8a" /> : data?.linhas?.length ? data.linhas.map((line) => (
+          <View key={line.chave || line.label} style={styles.reportLine}>
+            <View style={{flex:1}}><Text style={styles.reportLineTitle}>{line.label || line.chave}</Text><Text style={styles.reportLineMeta}>{Number(line.pedidos || 0)} pedido(s) • {Number(line.caixas || 0)} caixa(s)</Text></View>
+            <Text style={styles.reportLineValue}>{moeda(line.totalVendas)}</Text>
           </View>
-          <Card title="Atalhos operacionais" icon="flash-outline" subtitle="Acesse rapidamente as áreas mais usadas.">
-            <View style={styles.grid2}>
-              <Pressable onPress={() => setTab("a_receber")} style={[styles.tile, resumo.aReceber > 0 && styles.tileAttention]}>
-                <Ionicons name="notifications-outline" size={23} color="#ff3b8a" />
-                <Text style={styles.tileText}>A Receber</Text>
-                <Text style={styles.tileSub}>{resumo.aReceber} pedido(s) da vitrine</Text>
-              </Pressable>
-              {tabs.filter((t) => !["dashboard", "a_receber", "config"].includes(t[0])).slice(0, 6).map((t) => <Pressable key={t[0]} onPress={() => setTab(t[0])} style={styles.tile}><Ionicons name={t[2]} size={23} color="#ff3b8a" /><Text style={styles.tileText}>{t[1]}</Text></Pressable>)}
-            </View>
-          </Card>
-        </>}
+        )) : <EmptyState icon="analytics-outline" text="Gere o relatório para visualizar os dados do período." />}
+      </Card>
+    </>
+  );
+}
 
-        {tab === "categorias" && <CategoriasView categoriaForm={categoriaForm} setCategoriaForm={setCategoriaForm} setCategoriaTipo={setCategoriaTipo} tipoExtraForm={tipoExtraForm} setTipoExtraForm={setTipoExtraForm} tipoExtraItem={tipoExtraItem} setTipoExtraItem={setTipoExtraItem} adicionarItemAoTipoExtra={adicionarItemAoTipoExtra} adicionarTipoExtraCategoria={adicionarTipoExtraCategoria} removerTipoExtraCategoria={removerTipoExtraCategoria} salvarCategoria={salvarCategoria} limparCategoria={limparCategoria} categoriaEditandoId={categoriaEditandoId} categorias={categorias} categoriasFiltradas={categoriasFiltradas} categoriaBusca={categoriaBusca} setCategoriaBusca={setCategoriaBusca} iniciarEdicaoCategoria={iniciarEdicaoCategoria} deletarCategoria={deletarCategoria} />}
+function BottomNavItem({ item, active, onPress }) {
+  const badge = Number(item.badge || 0);
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.bottomItem, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={item.label}>
+      <View style={[styles.bottomIconWrap, active && styles.bottomIconWrapActive]}>
+        <Ionicons name={active ? String(item.icon).replace('-outline','') : item.icon} size={21} color={active ? "#fff" : "#64748b"} />
+        {badge > 0 ? <View style={styles.bottomBadge}><Text style={styles.bottomBadgeText}>{badge > 99 ? "99+" : badge}</Text></View> : null}
+      </View>
+      <Text style={[styles.bottomText, active && styles.bottomTextActive]} numberOfLines={1}>{item.label}</Text>
+    </Pressable>
+  );
+}
 
-        {tab === "produtos" && <ProdutosView produtoForm={produtoForm} setProdutoForm={setProdutoForm} produtoEditandoId={produtoEditandoId} categorias={categorias} categoriaSelecionada={categoriaSelecionada} tempInputs={tempInputs} setTempInputs={setTempInputs} adicionarItemProduto={adicionarItemProduto} removerItemProduto={removerItemProduto} adicionarExtraProduto={adicionarExtraProduto} removerExtraProduto={removerExtraProduto} salvarProduto={salvarProduto} limparProduto={limparProduto} produtos={produtos} produtosFiltrados={produtosFiltrados} produtoBusca={produtoBusca} setProdutoBusca={setProdutoBusca} produtoFiltro={produtoFiltro} setProdutoFiltro={setProdutoFiltro} iniciarEdicaoProduto={iniciarEdicaoProduto} deletarProduto={deletarProduto} />}
-
-        {tab === "mesas" && <>
-          <Card title="Criar mesa individual" icon="restaurant-outline" subtitle="Criação rápida sem sair da tela de mesas.">
-            <Field label="Número da mesa" value={mesaNumero} onChangeText={setMesaNumero} />
-            <Button title="Criar mesa" icon="add-outline" onPress={criarMesa} disabled={!!actionLabel} />
-          </Card>
-          <Card title="Criar mesas em lote" icon="copy-outline">
-            <View style={styles.row}><View style={{ flex: 1 }}><Field label="Início" value={loteInicio} onChangeText={setLoteInicio} keyboardType="number-pad" /></View><View style={{ width: 10 }} /><View style={{ flex: 1 }}><Field label="Fim" value={loteFim} onChangeText={setLoteFim} keyboardType="number-pad" /></View></View>
-            <Button title="Criar lote" icon="layers-outline" onPress={criarLote} disabled={!!actionLabel} />
-          </Card>
-          <MesasHubList mesas={mesas} onDelete={deletarMesa} />
-        </>}
-
-        {tab === "a_receber" && <List title="Pedidos A Receber" items={pedidosAReceber.map((p) => `#${p.numeroPedido || getId(p)?.slice(-6) || ""} • ${p.nomeCliente || p.cliente || "Cliente"} • ${p.status || "pendente"} • ${moeda(p.total || p.valorTotal)}`)} />}
-
-        {tab === "pedidos" && <List title="Controle de pedidos" items={pedidos.map((p) => `#${p.numeroPedido || getId(p)?.slice(-6) || ""} • ${p.status || "pendente"} • ${moeda(p.total || p.valorTotal)}`)} />}
-
-        {tab === "caixa" && <>
-          <Card title="Abertura e fechamento" icon="cash-outline" subtitle="O fechamento exige o PIN do operador que abriu o caixa quando houver PIN cadastrado.">
-            {caixa?.status === "aberto" ? <>
-              <Pill active>Caixa aberto</Pill>
-              <Text style={styles.text}>Operador: {caixa.operadorNome || operadorFechamento?.nome || "—"}</Text>
-              <Text style={styles.text}>Saldo inicial: {moeda(caixa.saldoInicial)}</Text>
-              <Text style={styles.text}>Dinheiro: {moeda(caixa.dinheiro || caixa.totalDinheiro)}</Text>
-              <Text style={styles.text}>Pix: {moeda(caixa.pix || caixa.totalPix)}</Text>
-              <Text style={styles.text}>Cartão: {moeda(caixa.cartao || caixa.totalCartao || Number(caixa.credito || 0) + Number(caixa.debito || 0))}</Text>
-              {fechamentoExigePin ? <Field label="PIN do operador" value={caixaForm.pin} onChangeText={(v) => setCaixaForm({ ...caixaForm, pin: v.replace(/\D/g, "").slice(0, 8) })} keyboardType="number-pad" secureTextEntry /> : null}
-              <Field label="Saldo final informado" value={caixaForm.saldoFinalInformado} onChangeText={(v) => setCaixaForm({ ...caixaForm, saldoFinalInformado: v })} keyboardType="decimal-pad" />
-              <Field label="Observação" value={caixaForm.observacao} onChangeText={(v) => setCaixaForm({ ...caixaForm, observacao: v })} multiline />
-              <Button title="Fechar caixa" variant="danger" icon="lock-closed-outline" onPress={fecharCaixa} />
-            </> : <>
-              <Pill danger>Caixa fechado</Pill>
-              <OperadorPicker operadores={operadoresAtivos} value={caixaForm.operadorId} onChange={(id) => setCaixaForm({ ...caixaForm, operadorId: id, pin: "" })} />
-              {aberturaExigePin ? <Field label="PIN do operador" value={caixaForm.pin} onChangeText={(v) => setCaixaForm({ ...caixaForm, pin: v.replace(/\D/g, "").slice(0, 8) })} keyboardType="number-pad" secureTextEntry /> : null}
-              <Field label="Saldo inicial" value={caixaForm.saldoInicial} onChangeText={(v) => setCaixaForm({ ...caixaForm, saldoInicial: v })} keyboardType="decimal-pad" />
-              <Button title="Abrir caixa" icon="lock-open-outline" onPress={abrirCaixa} />
-            </>}
-          </Card>
-          <OperadoresCaixaView operadorForm={operadorForm} setOperadorForm={setOperadorForm} operadorEditandoId={operadorEditandoId} operadores={operadoresCaixa} salvarOperador={salvarOperador} limparOperador={limparOperador} iniciarEdicaoOperador={iniciarEdicaoOperador} alternarOperador={alternarOperador} />
-        </>}
-
-        {tab === "garcons" && <GarconsHubView garcomForm={garcomForm} setGarcomForm={setGarcomForm} garcomEditandoId={garcomEditandoId} setPermGarcom={setPermGarcom} limparGarcom={limparGarcom} criarGarcom={criarGarcom} garcomLimitReached={garcomLimitReached} actionLabel={actionLabel} starterMobile={starterMobile} garcons={garcons} iniciarEdicaoGarcom={iniciarEdicaoGarcom} alternarGarcom={alternarGarcom} removerGarcom={removerGarcom} />}
-
-        {tab === "config" && <>
-          <Card title="Geral" icon="business-outline">
-            <Field label="Nome" value={rest.nome} onChangeText={(v) => setRest({ ...rest, nome: v })} />
-            <Field label="Telefone" value={rest.telefone} onChangeText={(v) => setRest({ ...rest, telefone: v })} />
-            <Field label="Endereço" value={rest.endereco || rest.enderecoCompleto} onChangeText={(v) => setRest({ ...rest, endereco: v, enderecoCompleto: v })} multiline />
-            <ToggleLine label="Loja aberta" value={rest.aberto !== false} onValueChange={(v) => setRest({ ...rest, aberto: v })} />
-            <Button title={saving ? "Salvando..." : "Salvar configurações"} icon="save-outline" onPress={salvarConfig} disabled={saving || !!actionLabel} />
-          </Card>
-          <MercadoPagoHubView rest={rest} mpLoading={mpLoading} conectar={conectarMercadoPago} atualizar={atualizarStatusMercadoPago} desconectar={desconectarMercadoPago} toggleCartao={toggleCartaoVitrine} />
-          <WhatsAppBotHubView status={botStatus} qrImageUrl={botQrImageUrl} loading={botLoading} conectar={conectarBot} mostrarQr={buscarQrBot} atualizar={() => carregarStatusBot({ alertar: true })} desconectar={desconectarBot} resetar={resetarBot} />
-        </>}
-      </ScrollView>
-
-      <View style={styles.bottomNav}>{tabs.map((t) => <Pressable key={t[0]} onPress={() => setTab(t[0])} style={styles.bottomItem}><Ionicons name={t[2]} size={20} color={tab === t[0] ? "#ff3b8a" : "#94a3b8"} /><Text style={[styles.bottomText, tab === t[0] && styles.bottomTextActive]}>{t[1]}</Text></Pressable>)}</View>
-    </View>
+function MoreMenuModal({ visible, onClose, items, activeKey, onSelect }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.moreSheet} onPress={() => {}}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}><View><Text style={styles.sheetKicker}>MOVYO HUB</Text><Text style={styles.sheetTitle}>Mais funcionalidades</Text></View><Pressable onPress={onClose} style={styles.sheetClose}><Ionicons name="close-outline" size={22} color="#334155" /></Pressable></View>
+          <View style={styles.moreGrid}>
+            {items.map((item) => {
+              const active = item.key === activeKey;
+              return <Pressable key={item.key} onPress={() => onSelect(item.key)} style={({pressed}) => [styles.moreItem, active && styles.moreItemActive, pressed && styles.pressed]}><View style={[styles.moreItemIcon, active && styles.moreItemIconActive]}><Ionicons name={item.icon} size={23} color={active ? "#fff" : "#ff3b8a"} /></View><Text style={[styles.moreItemText, active && styles.moreItemTextActive]}>{item.label}</Text></Pressable>;
+            })}
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -966,6 +1423,14 @@ function OperadoresCaixaView({ operadorForm, setOperadorForm, operadorEditandoId
       <Field label="Apelido" value={operadorForm.apelido} onChangeText={(v) => setOperadorForm({ ...operadorForm, apelido: v })} />
       <Field label={operadorEditandoId ? "Novo PIN (opcional)" : "PIN opcional"} value={operadorForm.pin} onChangeText={(v) => setOperadorForm({ ...operadorForm, pin: v.replace(/\D/g, "").slice(0, 8) })} keyboardType="number-pad" secureTextEntry />
       <Field label="Observação" value={operadorForm.observacao} onChangeText={(v) => setOperadorForm({ ...operadorForm, observacao: v })} />
+      <Text style={styles.label}>Permissões do operador</Text>
+      {[
+        ["abrirCaixa", "Abrir caixa", "Permite iniciar um novo turno de caixa."],
+        ["fecharCaixa", "Fechar caixa", "Permite realizar o fechamento financeiro."],
+        ["movimentarCaixa", "Sangrias e suprimentos", "Permite registrar movimentações manuais."],
+        ["visualizarRelatorios", "Visualizar relatórios", "Permite consultar dados financeiros."],
+        ["gerenciarOperadores", "Gerenciar operadores", "Permite criar e editar outros operadores."],
+      ].map(([key, label, hint]) => <ToggleLine key={key} label={label} hint={hint} value={!!normalizeOperatorPerms(operadorForm.permissoes)[key]} onValueChange={(value) => setOperadorForm({ ...operadorForm, permissoes: { ...normalizeOperatorPerms(operadorForm.permissoes), [key]: value } })} />)}
       <ToggleLine label="Operador ativo" value={operadorForm.ativo !== false} onValueChange={(v) => setOperadorForm({ ...operadorForm, ativo: v })} />
       <Button title={operadorEditandoId ? "Salvar operador" : "Cadastrar operador"} icon="save-outline" onPress={salvarOperador} />
     </Card>
@@ -1040,8 +1505,10 @@ function WhatsAppBotHubView({ status, qrImageUrl, loading, conectar, mostrarQr, 
   </Card>;
 }
 
-function Metric({ label, value, icon }) {
-  return <View style={styles.metric}><View style={styles.metricIcon}><Ionicons name={icon} size={17} color="#ff3b8a" /></View><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text></View>;
+function Metric({ label, value, icon, tone = "pink" }) {
+  const tones = { pink: ["#fff1f2", "#ff3b8a"], orange: ["#fff7ed", "#ea580c"], purple: ["#faf5ff", "#9333ea"], green: ["#ecfdf5", "#16a34a"] };
+  const [bg, color] = tones[tone] || tones.pink;
+  return <View style={styles.metric}><View style={[styles.metricIcon, { backgroundColor: bg }]}><Ionicons name={icon} size={18} color={color} /></View><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue} numberOfLines={1}>{value}</Text></View>;
 }
 
 function LicenseStatusCard({ info }) {
@@ -1291,4 +1758,116 @@ const styles = StyleSheet.create({
   bottomItem: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 8 },
   bottomText: { fontSize: 8, fontWeight: "900", color: "#94a3b8", marginTop: 3 },
   bottomTextActive: { color: "#ff3b8a" },
+  // Layout premium responsivo
+  contentContainer: { paddingHorizontal: 16, paddingTop: 16 },
+  contentContainerTablet: { width: "100%", maxWidth: 1040, alignSelf: "center", paddingHorizontal: 24 },
+  metricGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 2 },
+  brandLine: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 12 },
+  heroMark: { width: 45, height: 45, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,.16)", borderWidth: 1, borderColor: "rgba(255,255,255,.22)" },
+  heroMarkText: { color: "#fff", fontSize: 23, fontWeight: "900" },
+  heroTopTablet: { maxWidth: 1040, width: "100%", alignSelf: "center" },
+  heroStatusRow: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 15 },
+  statusPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(225,29,72,.24)", borderWidth: 1, borderColor: "rgba(254,205,211,.25)" },
+  statusPillOk: { backgroundColor: "rgba(22,163,74,.22)", borderColor: "rgba(187,247,208,.25)" },
+  statusPillPending: { backgroundColor: "rgba(245,158,11,.22)", borderColor: "rgba(253,230,138,.25)" },
+  statusPillText: { fontSize: 10, color: "#fecdd3", fontWeight: "900" },
+  statusPillTextOk: { color: "#d1fae5" },
+  statusPillTextPending: { color: "#fef3c7" },
+  syncText: { fontSize: 11, color: "#94a3b8", fontWeight: "700", marginTop: 4 },
+  refreshButton: { width: 42, height: 42, borderRadius: 15, backgroundColor: "#fff", borderWidth: 1, borderColor: "#ffe4ee", alignItems: "center", justifyContent: "center", shadowColor: "#0f172a", shadowOpacity: .07, shadowRadius: 10, elevation: 2 },
+  pressed: { opacity: .72, transform: [{ scale: .985 }] },
+  loadingLogo: { width: 68, height: 68, borderRadius: 23, backgroundColor: "rgba(255,255,255,.17)", borderWidth: 1, borderColor: "rgba(255,255,255,.25)", alignItems: "center", justifyContent: "center" },
+  loadingLogoText: { fontSize: 34, fontWeight: "900", color: "#fff" },
+
+  financialHero: { minHeight: 112, borderRadius: 22, padding: 17, marginBottom: 12, flexDirection: "row", alignItems: "center", backgroundColor: "#111827" },
+  financialEyebrow: { color: "#fda4af", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+  financialTotal: { color: "#fff", fontSize: 27, fontWeight: "900", marginTop: 5 },
+  financialCaption: { color: "#cbd5e1", fontSize: 11, fontWeight: "700", marginTop: 5 },
+  financialHeroIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: "#ff3b8a", alignItems: "center", justifyContent: "center" },
+  paymentGrid: { flexDirection: "row", flexWrap: "wrap", gap: 9 },
+  paymentItem: { minWidth: "47%", flexGrow: 1, flexBasis: 145, minHeight: 64, flexDirection: "row", alignItems: "center", gap: 9, padding: 10, borderRadius: 17, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: "#eef2f7" },
+  paymentIcon: { width: 34, height: 34, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#fff1f2" },
+  paymentLabel: { fontSize: 10, color: "#64748b", fontWeight: "800" },
+  paymentValue: { fontSize: 13, color: "#0f172a", fontWeight: "900", marginTop: 2 },
+
+  operationGrid: { flexDirection: "row", flexWrap: "wrap", gap: 9 },
+  operationItem: { minWidth: "47%", flexGrow: 1, flexBasis: 145, flexDirection: "row", alignItems: "center", gap: 9, padding: 10, borderRadius: 17, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: "#eef2f7" },
+  operationDot: { width: 36, height: 36, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: "#fff1f2" },
+  operationDotOk: { backgroundColor: "#ecfdf5" },
+  operationLabel: { fontSize: 10, fontWeight: "800", color: "#64748b" },
+  operationValue: { marginTop: 2, fontSize: 12, fontWeight: "900", color: "#be123c" },
+  operationValueOk: { color: "#166534" },
+  inventoryStrip: { marginTop: 12, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 7, padding: 10, borderRadius: 15, backgroundColor: "#111827" },
+  inventoryText: { color: "#e2e8f0", fontSize: 10, fontWeight: "800" },
+  inventoryDivider: { width: 3, height: 3, borderRadius: 2, backgroundColor: "#ff3b8a" },
+
+  dashboardTile: { width: "48%", minHeight: 112, borderRadius: 21, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: "#e2e8f0", padding: 13, justifyContent: "flex-end", overflow: "hidden" },
+  dashboardTileAttention: { backgroundColor: "#fff1f2", borderColor: "#fda4af" },
+  dashboardTileIcon: { width: 41, height: 41, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "#fff1f2", marginBottom: 10 },
+  dashboardTileIconAttention: { backgroundColor: "#ff3b8a" },
+  dashboardTileTitle: { color: "#0f172a", fontSize: 14, fontWeight: "900" },
+  dashboardTileSubtitle: { color: "#64748b", fontSize: 10, fontWeight: "700", marginTop: 3, paddingRight: 18 },
+  dashboardTileArrow: { position: "absolute", right: 10, bottom: 12 },
+
+  orderCard: { borderRadius: 20, borderWidth: 1, borderColor: "#e2e8f0", backgroundColor: "#fff", padding: 13, marginBottom: 10, shadowColor: "#0f172a", shadowOpacity: .04, shadowRadius: 8, elevation: 1 },
+  orderTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  orderNumberWrap: { flex: 1, minWidth: 0 },
+  orderNumber: { color: "#0f172a", fontSize: 15, fontWeight: "900" },
+  orderTime: { color: "#94a3b8", fontSize: 10, fontWeight: "700", marginTop: 2 },
+  orderStatus: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 999 },
+  orderStatusText: { fontSize: 10, fontWeight: "900" },
+  orderCustomer: { color: "#334155", fontSize: 13, fontWeight: "800", marginTop: 10 },
+  orderMetaRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 8 },
+  orderMeta: { flexDirection: "row", alignItems: "center", gap: 4, flex: 1 },
+  orderMetaText: { color: "#64748b", fontSize: 10, fontWeight: "700", textTransform: "capitalize" },
+  orderTotal: { color: "#0f172a", fontSize: 15, fontWeight: "900" },
+  orderActions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 7, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#f1f5f9" },
+
+  reportSummaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 9, marginBottom: 14 },
+  reportSummaryCard: { width: "48%", flexGrow: 1, minHeight: 105, borderRadius: 21, padding: 13, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e2e8f0", justifyContent: "space-between", shadowColor: "#0f172a", shadowOpacity: .05, shadowRadius: 9, elevation: 1 },
+  reportSummaryCardAccent: { backgroundColor: "#111827", borderColor: "#111827" },
+  reportSummaryLabel: { color: "#64748b", fontSize: 10, fontWeight: "800", marginTop: 8 },
+  reportSummaryLabelAccent: { color: "#cbd5e1" },
+  reportSummaryValue: { color: "#0f172a", fontSize: 18, fontWeight: "900", marginTop: 3 },
+  reportSummaryValueAccent: { color: "#fff" },
+  reportLine: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: "#f1f5f9" },
+  reportLineTitle: { color: "#0f172a", fontSize: 13, fontWeight: "900" },
+  reportLineMeta: { color: "#64748b", fontSize: 10, fontWeight: "700", marginTop: 3 },
+  reportLineValue: { color: "#0f172a", fontSize: 14, fontWeight: "900" },
+  responsiveRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  responsiveField: { flex: 1, minWidth: 155 },
+  cashMovementRow: { marginTop: 12, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 8, padding: 11, borderRadius: 15, backgroundColor: "#f8fafc" },
+  cashMovementText: { color: "#166534", fontSize: 11, fontWeight: "900" },
+
+  bottomIconWrap: { width: 38, height: 32, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  bottomIconWrapActive: { backgroundColor: "#ff3b8a" },
+  bottomBadge: { position: "absolute", right: -7, top: -6, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: "#e11d48", borderWidth: 2, borderColor: "#fff", alignItems: "center", justifyContent: "center" },
+  bottomBadgeText: { color: "#fff", fontSize: 8, fontWeight: "900" },
+
+  modalOverlay: { flex: 1, backgroundColor: "rgba(15,23,42,.55)", justifyContent: "flex-end", padding: 10 },
+  moreSheet: { width: "100%", maxWidth: 720, alignSelf: "center", backgroundColor: "#fff", borderRadius: 30, padding: 17, paddingBottom: 25, shadowColor: "#000", shadowOpacity: .2, shadowRadius: 24, elevation: 15 },
+  sheetHandle: { width: 42, height: 5, borderRadius: 3, backgroundColor: "#cbd5e1", alignSelf: "center", marginBottom: 13 },
+  sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 15 },
+  sheetKicker: { color: "#ff3b8a", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+  sheetTitle: { color: "#0f172a", fontSize: 22, fontWeight: "900", marginTop: 2 },
+  sheetClose: { width: 40, height: 40, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "#f1f5f9" },
+  moreGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  moreItem: { width: "31%", flexGrow: 1, minWidth: 96, minHeight: 102, borderRadius: 20, padding: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#f8fafc", borderWidth: 1, borderColor: "#e2e8f0" },
+  moreItemActive: { backgroundColor: "#fff1f2", borderColor: "#fda4af" },
+  moreItemIcon: { width: 42, height: 42, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "#fff1f2" },
+  moreItemIconActive: { backgroundColor: "#ff3b8a" },
+  moreItemText: { marginTop: 8, color: "#334155", fontSize: 11, fontWeight: "900", textAlign: "center" },
+  moreItemTextActive: { color: "#be123c" },
+
+  // Sobrescritas finais para iOS, Android e tablets
+  hero: { paddingTop: 18, paddingHorizontal: 18, paddingBottom: 17, backgroundColor: "#0f172a", borderBottomLeftRadius: 30, borderBottomRightRadius: 30, shadowColor: "#0f172a", shadowOpacity: .22, shadowRadius: 16, elevation: 7 },
+  content: { flex: 1 },
+  metric: { minWidth: "47%", flexGrow: 1, flexBasis: 145, backgroundColor: "#fff", borderRadius: 21, padding: 13, borderWidth: 1, borderColor: "#e2e8f0", shadowColor: "#0f172a", shadowOpacity: .06, shadowRadius: 10, elevation: 2 },
+  metricValue: { fontSize: 17, color: "#0f172a", fontWeight: "900", marginTop: 5 },
+  grid2: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  bottomNav: { position: "absolute", left: 10, right: 10, bottom: 7, minHeight: 69, backgroundColor: "rgba(255,255,255,.98)", borderRadius: 25, borderWidth: 1, borderColor: "#e2e8f0", flexDirection: "row", alignItems: "flex-start", justifyContent: "space-around", paddingTop: 7, paddingHorizontal: 5, shadowColor: "#0f172a", shadowOpacity: .16, shadowRadius: 18, elevation: 10 },
+  bottomItem: { flex: 1, minWidth: 0, alignItems: "center", justifyContent: "flex-start", paddingVertical: 1 },
+  bottomText: { fontSize: 9, fontWeight: "900", color: "#94a3b8", marginTop: 3 },
+  bottomTextActive: { color: "#ff3b8a" },
+
 });

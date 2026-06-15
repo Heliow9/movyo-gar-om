@@ -35,7 +35,37 @@ const money = (v) => {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 };
 const toNum = (v) => {
-  const n = Number(String(v ?? "0").replace(/\./g, "").replace(",", "."));
+  if (v === null || v === undefined || v === "") return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+
+  let s = String(v)
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/R\$/gi, "")
+    .replace(/[^0-9,.-]/g, "");
+
+  if (!s || s === "-" || s === "," || s === ".") return 0;
+
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+
+  if (hasComma && hasDot) {
+    // BR: 1.234,56 | US/API: 1,234.56
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
+    else s = s.replace(/,/g, "");
+  } else if (hasComma) {
+    // Entrada BR: 2,50
+    s = s.replace(",", ".");
+  } else if (hasDot) {
+    // Não remover ponto decimal vindo da API: 2.5 precisa continuar 2.5, não virar 25.
+    const parts = s.split(".");
+    if (parts.length > 2) {
+      const last = parts[parts.length - 1];
+      s = parts.slice(0, -1).join("") + "." + last;
+    }
+  }
+
+  const n = Number(s);
   return Number.isFinite(n) ? n : 0;
 };
 const maskMoneyInput = (value) => {

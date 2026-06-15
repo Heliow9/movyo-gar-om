@@ -91,9 +91,34 @@ const money = (v) => {
 };
 
 const toNum = (v) => {
-  if (v === null || v === undefined) return 0;
+  if (v === null || v === undefined || v === "") return 0;
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  const n = Number(String(v).replace(",", "."));
+
+  let s = String(v)
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/R\$/gi, "")
+    .replace(/[^0-9,.-]/g, "");
+
+  if (!s || s === "-" || s === "," || s === ".") return 0;
+
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+
+  if (hasComma && hasDot) {
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
+    else s = s.replace(/,/g, "");
+  } else if (hasComma) {
+    s = s.replace(",", ".");
+  } else if (hasDot) {
+    const parts = s.split(".");
+    if (parts.length > 2) {
+      const last = parts[parts.length - 1];
+      s = parts.slice(0, -1).join("") + "." + last;
+    }
+  }
+
+  const n = Number(s);
   return Number.isFinite(n) ? n : 0;
 };
 

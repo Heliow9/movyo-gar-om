@@ -47,15 +47,17 @@ const fmtTime = (d) => {
 const normalizeResumo = (data = {}, session = null) => {
   const garcomNome = session?.garcom?.apelido || session?.garcom?.nome || "Garçom";
 
-  // Vendas do turno no app = vendas de HOJE do garçom logado.
-  // Não usa totalTurno/vendasTurno como fallback porque em algumas APIs esse campo vinha acumulativo.
-  const vendasHojeGarcomRaw =
+  // Turno no app = produção/lancamentos de hoje do garçom logado.
+  // A API também retorna vendas pagas, mas para atualizar ao lançar pedido usamos o total lançado.
+  const vendasTurnoRaw =
+    data?.vendasLancadasHojeGarcom ??
+    data?.totalLancadoHojeGarcom ??
     data?.vendasHojeGarcom ??
     data?.totalVendasHojeGarcom ??
     data?.totalHojeGarcom ??
     data?.garcom?.vendasHoje ??
     data?.resumoGarcom?.vendasHoje;
-  const vendas = Number(vendasHojeGarcomRaw ?? 0) || 0;
+  const vendas = Number(vendasTurnoRaw ?? 0) || 0;
 
   const pedidosPendentes = Number(data?.pedidosPendentes ?? data?.pedidosFila ?? data?.pedidosAtivos ?? 0) || 0;
   const pedidosAReceber = Number(data?.pedidosAReceber ?? data?.aReceber ?? data?.recebidosVitrine ?? 0) || 0;
@@ -185,7 +187,7 @@ export default function HomeScreen({ navigation, onLogout }) {
 
       const result = await cachedApiGet({
         key: RESUMO_CACHE_KEY,
-        request: () => api.get("/api/garcons/app/resumo"),
+        request: () => api.get("/api/garcons/app/resumo", { params: { fresh: 1, _t: Date.now() } }),
         fallback: cached || {},
       });
 
@@ -211,7 +213,7 @@ export default function HomeScreen({ navigation, onLogout }) {
       // Fonte de verdade para o botão “A Receber”: pedidos vindos da vitrine/site.
       // Mantém compatibilidade com APIs antigas do garçom e com a mesma ideia do desktop.
       try {
-        const pedidosRes = await api.get("/api/garcons/app/pedidos", { params: { limit: 300 } });
+        const pedidosRes = await api.get("/api/garcons/app/pedidos", { params: { limit: 300, fresh: 1, _t: Date.now() } });
         const pedidosRaw = Array.isArray(pedidosRes?.data)
           ? pedidosRes.data
           : Array.isArray(pedidosRes?.data?.pedidos)
@@ -307,13 +309,13 @@ export default function HomeScreen({ navigation, onLogout }) {
         if (isPedidoAReceber(pedido)) notifyPedidoRecebido(pedido);
         schedule();
       };
-      ["mesaAtualizada", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => socket.on(ev, schedule));
+      ["mesaAtualizada", "mesaPedidoAtualizado", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => socket.on(ev, schedule));
       ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado"].forEach((ev) => socket.on(ev, handlePedidoVitrine));
     })();
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       const s = getSocket();
-      ["mesaAtualizada", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => s?.off(ev));
+      ["mesaAtualizada", "mesaPedidoAtualizado", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => s?.off(ev));
       ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado"].forEach((ev) => s?.off(ev));
     };
   }, [fetchDashboard, notifyPedidoRecebido]);

@@ -181,7 +181,7 @@ export default function PedidosScreen({ navigation, route }) {
     try {
       const result = await cachedApiGet({
         key: `${PEDIDOS_CACHE_KEY}:${dataAplicada}`,
-        request: () => api.get("/api/garcons/app/pedidos", { params: { limit: 300, dataInicio: dataAplicada, dataFim: dataAplicada } }),
+        request: () => api.get("/api/garcons/app/pedidos", { params: { limit: 300, dataInicio: dataAplicada, dataFim: dataAplicada, fresh: 1, _t: Date.now() } }),
         fallback: [],
       });
       const list = normalizeResponse(result?.data)
@@ -220,18 +220,38 @@ export default function PedidosScreen({ navigation, route }) {
 
       socket = connectSocket(restauranteId);
       const reload = () => fetchPedidos();
-      socket.on("novoPedido", reload);
-      socket.on("pedidoAtualizado", reload);
-      socket.on("pedidoCancelado", reload);
-      socket.on("mesaAtualizada", reload);
+      [
+        "novoPedido",
+        "pedidoCriado",
+        "pedidoRecebido",
+        "pedidoAtualizado",
+        "pedidoCancelado",
+        "mesaAtualizada",
+        "mesaPedidoAtualizado",
+        "balcaoAtualizado",
+        "filaPedidosAtualizada",
+        "rankingGarconsAtualizado",
+        "resumoGarcomAtualizado",
+        "atendimentoAtualizado",
+      ].forEach((ev) => socket.on(ev, reload));
     })();
 
     return () => {
       const s = getSocket();
-      s?.off("novoPedido");
-      s?.off("pedidoAtualizado");
-      s?.off("pedidoCancelado");
-      s?.off("mesaAtualizada");
+      [
+        "novoPedido",
+        "pedidoCriado",
+        "pedidoRecebido",
+        "pedidoAtualizado",
+        "pedidoCancelado",
+        "mesaAtualizada",
+        "mesaPedidoAtualizado",
+        "balcaoAtualizado",
+        "filaPedidosAtualizada",
+        "rankingGarconsAtualizado",
+        "resumoGarcomAtualizado",
+        "atendimentoAtualizado",
+      ].forEach((ev) => s?.off(ev));
     };
   }, [fetchPedidos]);
 

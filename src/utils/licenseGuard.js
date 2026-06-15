@@ -1,11 +1,24 @@
 // src/utils/licenseGuard.js
-// Centraliza a regra de bloqueio/licença para Login, Hub Restaurante e Garçom.
+// Fonte única das regras de bloqueio/licença usadas pelo login, navegação e interceptor.
 
-const BLOCKED_WORDS = ["bloqueado", "bloqueada", "suspenso", "suspensa", "inativo", "inativa", "desativado", "desativada"];
-const EXPIRED_WORDS = ["vencido", "vencida", "expirado", "expirada", "licença vencida", "licenca vencida", "assinatura vencida", "plano vencido", "inadimplente"];
+const BLOCKED_WORDS = [
+  "bloqueado", "bloqueada", "suspenso", "suspensa", "inativo", "inativa",
+  "desativado", "desativada", "blocked", "suspended", "disabled",
+];
+const EXPIRED_WORDS = [
+  "vencido", "vencida", "expirado", "expirada", "licença vencida", "licenca vencida",
+  "assinatura vencida", "plano vencido", "inadimplente", "expired",
+];
+
+export const ACCESS_CODES = {
+  RESTAURANTE_BLOQUEADO: "RESTAURANTE_BLOQUEADO",
+  LICENCA_VENCIDA: "LICENCA_VENCIDA",
+  GARCOM_DESATIVADO: "GARCOM_DESATIVADO",
+};
 
 export const RESTAURANTE_BLOQUEADO_MSG = "Restaurante bloqueado. Entre em contato com o suporte Movyo.";
 export const LICENCA_VENCIDA_MSG = "Licença vencida. Regularize o plano para continuar usando o Movyo.";
+export const GARCOM_DESATIVADO_MSG = "Seu acesso foi desativado. Fale com o gerente do restaurante.";
 
 function text(v) {
   return String(v ?? "").trim().toLowerCase();
@@ -25,29 +38,40 @@ function boolFalse(v) {
   return false;
 }
 
-function parseDate(value) {
+export function parseAccessDate(value) {
   if (!value) return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
 
   const raw = String(value).trim();
   if (!raw) return null;
 
-  // Aceita yyyy-mm-dd, ISO e dd/mm/yyyy.
-  let d = null;
+  // Datas sem horário são interpretadas no fuso local até o fim do dia.
   const br = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if (br) d = new Date(Number(br[3]), Number(br[2]) - 1, Number(br[1]), 23, 59, 59, 999);
-  else d = new Date(raw);
+  if (br) {
+    const d = new Date(Number(br[3]), Number(br[2]) - 1, Number(br[1]), 23, 59, 59, 999);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
 
-  if (!d || Number.isNaN(d.getTime())) return null;
-  return d;
+  const isoOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoOnly) {
+    const d = new Date(Number(isoOnly[1]), Number(isoOnly[2]) - 1, Number(isoOnly[3]), 23, 59, 59, 999);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const isoPrefix = raw.match(/^(\d{4})-(\d{2})-(\d{2})T00:00:00(?:\.\d+)?Z$/i);
+  if (isoPrefix) {
+    const d = new Date(Number(isoPrefix[1]), Number(isoPrefix[2]) - 1, Number(isoPrefix[3]), 23, 59, 59, 999);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function isBeforeTodayEnd(dateLike) {
-  const d = parseDate(dateLike);
+function isExpiredDate(dateLike) {
+  const d = parseAccessDate(dateLike);
   if (!d) return false;
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
-  return d.getTime() < todayEnd.getTime() && d.toDateString() !== todayEnd.toDateString();
+  return d.getTime() < Date.now();
 }
 
 export function pickRestauranteFromPayload(payload) {
@@ -67,65 +91,72 @@ export function pickRestauranteFromPayload(payload) {
 
 export function isRestauranteBloqueado(restaurante = {}) {
   const r = restaurante || {};
-  if (boolTrue(r.bloqueado || r.blocked || r.suspenso || r.suspended)) return true;
+  if (boolTrue(r.bloqueado ?? r.blocked ?? r.suspenso ?? r.suspended)) return true;
   if (boolFalse(r.ativo ?? r.active ?? r.habilitado ?? r.enabled)) return true;
 
   const statusFields = [r.status, r.statusConta, r.statusSistema, r.statusRestaurante, r.situacao, r.situacaoConta];
-  return statusFields.some((v) => BLOCKED_WORDS.includes(text(v)));
+  return statusFields.some((v) => BLOCKED_WORDS.some((word) => text(v) === word || text(v).includes(word)));
 }
 
 export function isLicencaVencida(restaurante = {}) {
   const r = restaurante || {};
   const statusFields = [r.statusAssinatura, r.statusPlano, r.statusLicenca, r.statusLicença, r.planoStatus, r.assinaturaStatus];
-  if (statusFields.some((v) => EXPIRED_WORDS.includes(text(v)))) return true;
+  if (statusFields.some((v) => EXPIRED_WORDS.some((word) => text(v) === word || text(v).includes(word)))) return true;
 
   const dateFields = [
-    r.dataFimPlano,
-    r.dataVencimentoPlano,
-    r.vencimentoPlano,
-    r.vencimento,
-    r.licencaAte,
-    r.licençaAte,
-    r.licencaValidaAte,
-    r.licençaValidaAte,
-    r.validadePlano,
-    r.validade,
-    r.assinaturaAte,
-    r.expiresAt,
+    r.dataFimPlano, r.dataVencimentoPlano, r.vencimentoPlano, r.vencimento,
+    r.licencaAte, r.licençaAte, r.licencaValidaAte, r.licençaValidaAte,
+    r.validadePlano, r.validade, r.assinaturaAte, r.expiresAt,
   ];
-
-  return dateFields.some(isBeforeTodayEnd);
+  return dateFields.some(isExpiredDate);
 }
 
-export function getRestauranteAccessBlockMessage(restaurante) {
+export function getRestauranteAccessBlockInfo(restaurante) {
   if (!restaurante || typeof restaurante !== "object") return null;
-
-  // Prioridade intencional:
-  // 1) bloqueio/desativação só quando o cadastro realmente está bloqueado/inativo;
-  // 2) vencimento só quando campo/status de licença/plano indicar vencido.
-  // Assim não mistura “restaurante bloqueado” com “licença vencida”.
-  if (isRestauranteBloqueado(restaurante)) return RESTAURANTE_BLOQUEADO_MSG;
-  if (isLicencaVencida(restaurante)) return LICENCA_VENCIDA_MSG;
+  if (isRestauranteBloqueado(restaurante)) {
+    return { code: ACCESS_CODES.RESTAURANTE_BLOQUEADO, message: RESTAURANTE_BLOQUEADO_MSG, reason: "blocked" };
+  }
+  if (isLicencaVencida(restaurante)) {
+    return { code: ACCESS_CODES.LICENCA_VENCIDA, message: LICENCA_VENCIDA_MSG, reason: "expired" };
+  }
   return null;
 }
 
-export function getAuthBlockMessageFromError(err) {
+export function getRestauranteAccessBlockMessage(restaurante) {
+  return getRestauranteAccessBlockInfo(restaurante)?.message || null;
+}
+
+export function getAuthBlockInfoFromError(err) {
   const data = err?.response?.data || {};
-  const msg = data?.message || data?.mensagem || data?.error || err?.message || "";
+  const code = String(data?.code || data?.codigo || "").trim().toUpperCase();
+  const msg = data?.message || data?.mensagem || data?.error || data?.erro || err?.message || "";
   const s = text(msg);
 
-  // Primeiro licença: mensagens como “licença vencida” não podem cair como
-  // “restaurante bloqueado/desativado”.
-  if (s.includes("licen") && s.includes("venc")) return LICENCA_VENCIDA_MSG;
-  if (s.includes("assinatura") && s.includes("venc")) return LICENCA_VENCIDA_MSG;
-  if (s.includes("plano") && s.includes("venc")) return LICENCA_VENCIDA_MSG;
-  if (EXPIRED_WORDS.some((w) => s.includes(w))) return LICENCA_VENCIDA_MSG;
+  if (code === ACCESS_CODES.LICENCA_VENCIDA) {
+    return { code, message: LICENCA_VENCIDA_MSG, reason: "expired" };
+  }
+  if (code === ACCESS_CODES.RESTAURANTE_BLOQUEADO) {
+    return { code, message: RESTAURANTE_BLOQUEADO_MSG, reason: "blocked" };
+  }
+  if (code === ACCESS_CODES.GARCOM_DESATIVADO || s.includes("garçom desativado") || s.includes("garcom desativado") || s.includes("seu acesso foi desativado")) {
+    return { code: ACCESS_CODES.GARCOM_DESATIVADO, message: GARCOM_DESATIVADO_MSG, reason: "user_disabled" };
+  }
 
-  // Depois bloqueio real do restaurante. Evita interpretar textos genéricos
-  // de sessão/permissão como bloqueio do restaurante.
-  if (s.includes("restaurante bloque") || s.includes("restaurante desativ") || s.includes("restaurante inativ")) return RESTAURANTE_BLOQUEADO_MSG;
-  if (s.includes("conta bloque") || s.includes("conta desativ") || s.includes("conta inativ")) return RESTAURANTE_BLOQUEADO_MSG;
+  if ((s.includes("licen") || s.includes("assinatura") || s.includes("plano")) && (s.includes("venc") || s.includes("expir"))) {
+    return { code: ACCESS_CODES.LICENCA_VENCIDA, message: LICENCA_VENCIDA_MSG, reason: "expired" };
+  }
+  if (EXPIRED_WORDS.some((word) => s.includes(word))) {
+    return { code: ACCESS_CODES.LICENCA_VENCIDA, message: LICENCA_VENCIDA_MSG, reason: "expired" };
+  }
+
+  if (s.includes("restaurante bloque") || s.includes("restaurante desativ") || s.includes("restaurante inativ") || s.includes("conta bloque")) {
+    return { code: ACCESS_CODES.RESTAURANTE_BLOQUEADO, message: RESTAURANTE_BLOQUEADO_MSG, reason: "blocked" };
+  }
 
   const restaurante = pickRestauranteFromPayload(data);
-  return getRestauranteAccessBlockMessage(restaurante);
+  return getRestauranteAccessBlockInfo(restaurante);
+}
+
+export function getAuthBlockMessageFromError(err) {
+  return getAuthBlockInfoFromError(err)?.message || null;
 }

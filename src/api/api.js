@@ -2,7 +2,7 @@
 import axios from "axios";
 import { API_URL } from "./config";
 import { getToken } from "./storage/session";
-import { getAuthBlockMessageFromError } from "../utils/licenseGuard";
+import { getAuthBlockInfoFromError } from "../utils/licenseGuard";
 
 // mini event bus
 export const authEvents = (() => {
@@ -58,11 +58,11 @@ api.interceptors.response.use(
       lower.includes("jwt malformed") ||
       lower.includes("invalid token");
 
-    const accessBlockMessage = getAuthBlockMessageFromError(err);
+    const accessBlock = getAuthBlockInfoFromError(err);
     const isLoginRequest = url.includes("/api/garcons/login") || url.includes("/api/restaurantes/login");
 
-    if (!isLoginRequest && accessBlockMessage) {
-      authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", status, message: accessBlockMessage });
+    if (!isLoginRequest && accessBlock) {
+      authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", status, code: accessBlock.code, reason: accessBlock.reason, message: accessBlock.message });
       return Promise.reject(err);
     }
 
