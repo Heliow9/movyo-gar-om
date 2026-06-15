@@ -21,12 +21,13 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import NotificationPermissionBanner from "../components/NotificationPermissionBanner";
 import NetInfo from "@react-native-community/netinfo";
 import { api, authEvents } from "../api/api";
 import { clearSession, getSession, updateSessionRestaurantePatch } from "../api/storage/session";
 import { getAuthBlockInfoFromError, getRestauranteAccessBlockInfo } from "../utils/licenseGuard";
 import { connectSocket, getSocket, onSocketState } from "../socket/socket";
-import { alertNovoPedido, requestNotificationPermission } from "../utils/pwaNotifications";
+import { alertCaixaAberto, alertNovoPedido } from "../utils/pwaNotifications";
 
 const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza", PIZZA_DUAS: "pizza_duas" };
 const MOCK_IMAGE = "https://cdn.pixabay.com/photo/2017/12/09/08/18/pizza-3007395_960_720.jpg";
@@ -566,23 +567,32 @@ export default function HubRestauranteScreen({ onLogout }) {
     if (!restauranteId) return undefined;
     const socket = connectSocket(restauranteId);
     const atualizar = () => refreshDashboardNow({ delay: 500 });
-    const eventos = [
-      "novoPedido",
-      "pedidoCriado",
-      "pedidoVitrineCriado",
-      "pedidoRecebido",
-      "vitrinePedidoCriado",
-      "novoPedidoVitrine",
-      "pedidoAtualizado",
-      "pagamentoAtualizado",
-      "balcaoAtualizado",
-      "mesaAtualizada",
-      "mesaCriada",
-      "mesaExcluida",
-      "caixaAtualizado",
-      "caixaAberto",
-      "caixaFechado",
+    const eventosAtualizacao = [
+      "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado",
+      "mesaAtualizada", "mesaCriada", "mesaExcluida",
+      "caixaAtualizado", "caixaFechado",
     ];
+    const eventosNovoPedido = [
+      "novoPedido", "pedidoCriado", "pedidoVitrineCriado", "pedidoRecebido",
+      "vitrinePedidoCriado", "novoPedidoVitrine", "deliveryPedidoCriado",
+      "pedidoBalcaoCriado", "pedidoMesaCriado", "comandaCriada",
+    ];
+    const eventosCaixaAberto = ["caixaAberto", "caixa_aberto", "cashRegisterOpened"];
+    const notificarPedido = (payload = {}) => {
+      const pedido = payload?.pedido || payload;
+      const id = String(getId(pedido) || pedido.numeroPedido || pedido.numero || pedido.codigo || "");
+      if (id && pedidosNotificadosRef.current.has(id)) { atualizar(); return; }
+      if (id) pedidosNotificadosRef.current.add(id);
+      const codigo = getPedidoCodigoHub(pedido);
+      if (Platform.OS === "web") alertNovoPedido({ ...pedido, codigo }).catch(() => {});
+      else Alert.alert("Novo pedido", `Pedido ${codigo ? `#${codigo}` : "recebido"}.`);
+      atualizar();
+    };
+    const notificarCaixaAberto = (payload = {}) => {
+      if (Platform.OS === "web") alertCaixaAberto(payload?.caixa || payload).catch(() => {});
+      else Alert.alert("Caixa aberto", "O caixa do restaurante foi aberto.");
+      atualizar();
+    };
     const acessoEncerrado = (payload = {}) => {
       const code = String(payload?.code || payload?.codigo || "").toUpperCase();
       const reason = code === "LICENCA_VENCIDA" ? "expired" : "blocked";
@@ -592,12 +602,16 @@ export default function HubRestauranteScreen({ onLogout }) {
       authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", code, reason, message });
     };
     const eventosAcesso = ["restauranteBloqueado", "licencaVencida", "acessoEncerrado", "forceLogout"];
-    eventos.forEach((ev) => socket?.on?.(ev, atualizar));
+    eventosAtualizacao.forEach((ev) => socket?.on?.(ev, atualizar));
+    eventosNovoPedido.forEach((ev) => socket?.on?.(ev, notificarPedido));
+    eventosCaixaAberto.forEach((ev) => socket?.on?.(ev, notificarCaixaAberto));
     eventosAcesso.forEach((ev) => socket?.on?.(ev, acessoEncerrado));
     return () => {
       if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
       const current = getSocket();
-      eventos.forEach((ev) => current?.off?.(ev, atualizar));
+      eventosAtualizacao.forEach((ev) => current?.off?.(ev, atualizar));
+      eventosNovoPedido.forEach((ev) => current?.off?.(ev, notificarPedido));
+      eventosCaixaAberto.forEach((ev) => current?.off?.(ev, notificarCaixaAberto));
       eventosAcesso.forEach((ev) => current?.off?.(ev, acessoEncerrado));
     };
   }, [restauranteId, refreshDashboardNow]);
@@ -613,11 +627,6 @@ export default function HubRestauranteScreen({ onLogout }) {
   }, [socketStatus.connected, refreshDashboardNow]);
 
 
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      requestNotificationPermission().catch(() => {});
-    }
-  }, []);
 
   useEffect(() => {
     if (!pedidosAReceber.length) return;
@@ -1083,6 +1092,7 @@ export default function HubRestauranteScreen({ onLogout }) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load({ silent: true })} tintColor="#ff3b8a" colors={["#ff3b8a"]} />}
         >
+          <NotificationPermissionBanner />
           <View style={styles.sectionHeader}>
             <View style={{ flex: 1 }}>
               <Text style={styles.sectionKicker}>Painel do restaurante</Text>

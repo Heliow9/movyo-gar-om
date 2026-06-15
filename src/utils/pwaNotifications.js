@@ -139,3 +139,18 @@ export async function alertNovoPedido(pedido = {}) {
     data: { url: "/pedidos", pedidoId: pedido._id || pedido.id },
   });
 }
+
+export async function alertCaixaAberto(payload = {}) {
+  const operador = payload?.operador?.nome || payload?.operadorNome || payload?.nomeOperador || payload?.usuario?.nome || "Operador";
+  const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+  vibrate([180, 70, 180]);
+  playNotificationSound();
+
+  await showLocalNotification("Caixa aberto na Movyo", {
+    body: `${operador} abriu o caixa às ${hora}.`,
+    tag: `caixa-aberto-${payload?._id || payload?.id || Date.now()}`,
+    renotify: true,
+    data: { url: "/", caixaId: payload?._id || payload?.id },
+  });
+}

@@ -20,6 +20,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AppVersionInfo from "../components/AppVersionInfo";
+import NotificationPermissionBanner from "../components/NotificationPermissionBanner";
 
 import { api } from "../api/api";
 import { clearSession, getSession } from "../api/storage/session";
@@ -27,7 +28,7 @@ import { connectSocket, getSocket } from "../socket/socket";
 import { useAppTheme } from "../theme/ThemeProvider";
 import { cachedApiGet, cacheGetData, cacheSet } from "../utils/smartCache";
 import { flushQueue, getQueueCount, startQueueWatcher } from "../utils/offlineQueue";
-import { alertNovoPedido, requestNotificationPermission } from "../utils/pwaNotifications";
+import { alertCaixaAberto, alertNovoPedido } from "../utils/pwaNotifications";
 
 const RESUMO_CACHE_KEY = "garcom:dashboard:resumo:v4-dia-garcom";
 
@@ -164,7 +165,6 @@ export default function HomeScreen({ navigation, onLogout }) {
     const mensagem = `${numero ? `Pedido #${numero}` : "Novo pedido"} de ${cliente}${total ? ` • ${moneyBRL(total)}` : ""}`;
 
     if (Platform.OS === "web") {
-      try { await requestNotificationPermission(); } catch (_) {}
       try { await alertNovoPedido({ ...pedido, codigo: numero, cliente, total }); } catch (_) {}
       return;
     }
@@ -304,19 +304,26 @@ export default function HomeScreen({ navigation, onLogout }) {
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => fetchDashboard({ silent: true }), 600);
       };
-      const handlePedidoVitrine = (payload = {}) => {
+      const handleNovoPedido = (payload = {}) => {
         const pedido = payload?.pedido || payload;
-        if (isPedidoAReceber(pedido)) notifyPedidoRecebido(pedido);
+        notifyPedidoRecebido(pedido);
         schedule();
       };
-      ["mesaAtualizada", "mesaPedidoAtualizado", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => socket.on(ev, schedule));
-      ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado"].forEach((ev) => socket.on(ev, handlePedidoVitrine));
+      const handleCaixaAberto = (payload = {}) => {
+        if (Platform.OS === "web") alertCaixaAberto(payload?.caixa || payload).catch(() => {});
+        else Alert.alert("Caixa aberto", "O caixa do restaurante foi aberto.");
+        schedule();
+      };
+      ["mesaAtualizada", "mesaPedidoAtualizado", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaFechado"].forEach((ev) => socket.on(ev, schedule));
+      ["caixaAberto", "caixa_aberto", "cashRegisterOpened"].forEach((ev) => socket.on(ev, handleCaixaAberto));
+      ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado", "novoPedidoVitrine", "pedidoBalcaoCriado", "pedidoMesaCriado", "comandaCriada"].forEach((ev) => socket.on(ev, handleNovoPedido));
     })();
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       const s = getSocket();
-      ["mesaAtualizada", "mesaPedidoAtualizado", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaAberto", "caixaFechado"].forEach((ev) => s?.off(ev));
-      ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado"].forEach((ev) => s?.off(ev));
+      ["mesaAtualizada", "mesaPedidoAtualizado", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaFechado"].forEach((ev) => s?.off(ev));
+      ["caixaAberto", "caixa_aberto", "cashRegisterOpened"].forEach((ev) => s?.off(ev));
+      ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado", "novoPedidoVitrine", "pedidoBalcaoCriado", "pedidoMesaCriado", "comandaCriada"].forEach((ev) => s?.off(ev));
     };
   }, [fetchDashboard, notifyPedidoRecebido]);
 
@@ -405,6 +412,7 @@ export default function HomeScreen({ navigation, onLogout }) {
       </LinearGradient>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentInner} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        <NotificationPermissionBanner />
         {!isOnline && (
           <View style={styles.offlineBanner}>
             <Ionicons name="wifi-outline" size={18} color="#92400e" />
