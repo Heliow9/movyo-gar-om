@@ -12,6 +12,7 @@ import ComandaScreen from "../screens/ComandaScreen";
 import MeuPerfilScreen from "../screens/MeuPerfilScreen";
 import HubRestauranteScreen from "../screens/HubRestauranteScreen";
 import AccessBlockedScreen from "../components/AccessBlockedScreen";
+import PushSubscriptionSync from "../components/PushSubscriptionSync";
 
 import { clearSession, getSession, updateSessionRestaurantePatch, updateSessionGarcomPatch } from "../api/storage/session";
 import { api, authEvents } from "../api/api";
@@ -182,22 +183,28 @@ export default function AppNavigator() {
 
   if (sessionType === "restaurante") {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false, animation: "fade" }}>
-        <Stack.Screen name="HubRestaurante">
-          {(props) => <HubRestauranteScreen {...props} onLogout={manualLogout} />}
-        </Stack.Screen>
-      </Stack.Navigator>
+      <>
+        <PushSubscriptionSync enabled />
+        <Stack.Navigator screenOptions={{ headerShown: false, animation: "fade" }}>
+          <Stack.Screen name="HubRestaurante">
+            {(props) => <HubRestauranteScreen {...props} onLogout={manualLogout} />}
+          </Stack.Screen>
+        </Stack.Navigator>
+      </>
     );
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
-      <Stack.Screen name="Home">{(props) => <HomeScreen {...props} onLogout={manualLogout} />}</Stack.Screen>
-      <Stack.Screen name="Mesas" component={MesasScreen} />
-      <Stack.Screen name="Pedidos" component={PedidosScreen} />
-      <Stack.Screen name="Balcao" component={BalcaoScreen} />
-      <Stack.Screen name="Comanda" component={ComandaScreen} />
-      <Stack.Screen name="MeuPerfil">{(props) => <MeuPerfilScreen {...props} onLogout={manualLogout} />}</Stack.Screen>
-    </Stack.Navigator>
+    <>
+      <PushSubscriptionSync enabled />
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
+        <Stack.Screen name="Home">{(props) => <HomeScreen {...props} onLogout={manualLogout} />}</Stack.Screen>
+        <Stack.Screen name="Mesas" component={MesasScreen} />
+        <Stack.Screen name="Pedidos" component={PedidosScreen} />
+        <Stack.Screen name="Balcao" component={BalcaoScreen} />
+        <Stack.Screen name="Comanda" component={ComandaScreen} />
+        <Stack.Screen name="MeuPerfil">{(props) => <MeuPerfilScreen {...props} onLogout={manualLogout} />}</Stack.Screen>
+      </Stack.Navigator>
+    </>
   );
 }

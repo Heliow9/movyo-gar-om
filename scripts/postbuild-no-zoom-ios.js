@@ -37,21 +37,56 @@ const noZoomScript = `
   </script>
 `;
 
+const pwaHead = `
+  <!-- Movyo Hub PWA / iOS -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#ff3b8a" />
+  <meta name="application-name" content="Movyo Hub" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Movyo Hub" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/logo192.png" />
+`;
+
+const serviceWorkerRegistration = `
+  <script>
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function (error) {
+          console.warn('[Movyo PWA] Falha ao registrar service worker:', error);
+        });
+      });
+    })();
+  </script>
+`;
+
 if (!fs.existsSync(distIndex)) {
   console.warn('[Movyo] dist/index.html não encontrado. Rode primeiro: npx expo export -p web');
   process.exit(0);
 }
 
 let html = fs.readFileSync(distIndex, 'utf8');
+html = html.replace(/<html(?:\s+lang=["'][^"']*["'])?/i, '<html lang="pt-BR"');
+
 if (/<meta\s+name=["']viewport["'][^>]*>/i.test(html)) {
   html = html.replace(/<meta\s+name=["']viewport["'][^>]*>/i, `<meta name="viewport" content="${viewport}">`);
 } else {
   html = html.replace(/<head[^>]*>/i, match => `${match}\n  <meta name="viewport" content="${viewport}">`);
 }
 
+if (!html.includes('rel="manifest"') && !html.includes("rel='manifest'")) {
+  html = html.replace('</head>', `${pwaHead}\n</head>`);
+}
+
 if (!html.includes('normalizeFocusedInput')) {
   html = html.replace('</head>', `${noZoomScript}\n</head>`);
 }
 
+if (!html.includes("navigator.serviceWorker.register('/sw.js'")) {
+  html = html.replace('</body>', `${serviceWorkerRegistration}\n</body>`);
+}
+
 fs.writeFileSync(distIndex, html, 'utf8');
-console.log('[Movyo] Correção anti-zoom iOS/PWA aplicada em dist/index.html');
+console.log('[Movyo] PWA iOS, service worker e correção anti-zoom aplicados em dist/index.html');

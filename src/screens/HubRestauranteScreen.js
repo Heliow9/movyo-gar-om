@@ -48,6 +48,13 @@ const isStatusAReceberHub = (pedido = {}) => {
 };
 const isPedidoAReceberHub = (pedido = {}) => isOrigemVitrineHub(pedido) && isStatusAReceberHub(pedido);
 const getPedidoCodigoHub = (pedido = {}) => pedido.numeroPedido || pedido.numero || pedido.codigo || String(getId(pedido) || "").slice(-6);
+const normalizePedidoStatusHub = (pedido = {}) =>
+  String(pedido?.status || pedido?.statusPedido || pedido?.pedido?.status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[ -]/g, "_");
+const isPedidoEmProducaoHub = (pedido = {}) =>
+  ["em_producao", "producao", "preparando", "em_preparo"].includes(normalizePedidoStatusHub(pedido));
 
 const toLocalISODate = (value = new Date()) => {
   const d = value instanceof Date ? value : new Date(value);
@@ -568,7 +575,7 @@ export default function HubRestauranteScreen({ onLogout }) {
     const socket = connectSocket(restauranteId);
     const atualizar = () => refreshDashboardNow({ delay: 500 });
     const eventosAtualizacao = [
-      "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado",
+      "pagamentoAtualizado", "balcaoAtualizado",
       "mesaAtualizada", "mesaCriada", "mesaExcluida",
       "caixaAtualizado", "caixaFechado",
     ];
@@ -578,15 +585,22 @@ export default function HubRestauranteScreen({ onLogout }) {
       "pedidoBalcaoCriado", "pedidoMesaCriado", "comandaCriada",
     ];
     const eventosCaixaAberto = ["caixaAberto", "caixa_aberto", "cashRegisterOpened"];
-    const notificarPedido = (payload = {}) => {
+    const notificarPedido = (payload = {}, tipo = "novo") => {
       const pedido = payload?.pedido || payload;
-      const id = String(getId(pedido) || pedido.numeroPedido || pedido.numero || pedido.codigo || "");
-      if (id && pedidosNotificadosRef.current.has(id)) { atualizar(); return; }
-      if (id) pedidosNotificadosRef.current.add(id);
+      const id = String(getId(pedido) || pedido.numeroPedido || pedido.numero || pedido.codigo || "sem-id");
+      const dedupeKey = `${id}:${tipo}`;
+      if (pedidosNotificadosRef.current.has(dedupeKey)) { atualizar(); return; }
+      pedidosNotificadosRef.current.add(dedupeKey);
       const codigo = getPedidoCodigoHub(pedido);
-      if (Platform.OS === "web") alertNovoPedido({ ...pedido, codigo }).catch(() => {});
-      else Alert.alert("Novo pedido", `Pedido ${codigo ? `#${codigo}` : "recebido"}.`);
+      const emProducao = tipo === "em_producao" || isPedidoEmProducaoHub(pedido);
+      if (Platform.OS === "web") alertNovoPedido({ ...pedido, codigo }, { emProducao }).catch(() => {});
+      else Alert.alert(emProducao ? "Pedido em produção" : "Novo pedido", `Pedido ${codigo ? `#${codigo}` : "recebido"}.`);
       atualizar();
+    };
+    const notificarPedidoAtualizado = (payload = {}) => {
+      const pedido = payload?.pedido || payload;
+      if (isPedidoEmProducaoHub(pedido)) notificarPedido(pedido, "em_producao");
+      else atualizar();
     };
     const notificarCaixaAberto = (payload = {}) => {
       if (Platform.OS === "web") alertCaixaAberto(payload?.caixa || payload).catch(() => {});
@@ -603,6 +617,7 @@ export default function HubRestauranteScreen({ onLogout }) {
     };
     const eventosAcesso = ["restauranteBloqueado", "licencaVencida", "acessoEncerrado", "forceLogout"];
     eventosAtualizacao.forEach((ev) => socket?.on?.(ev, atualizar));
+    socket?.on?.("pedidoAtualizado", notificarPedidoAtualizado);
     eventosNovoPedido.forEach((ev) => socket?.on?.(ev, notificarPedido));
     eventosCaixaAberto.forEach((ev) => socket?.on?.(ev, notificarCaixaAberto));
     eventosAcesso.forEach((ev) => socket?.on?.(ev, acessoEncerrado));
@@ -610,6 +625,7 @@ export default function HubRestauranteScreen({ onLogout }) {
       if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
       const current = getSocket();
       eventosAtualizacao.forEach((ev) => current?.off?.(ev, atualizar));
+      current?.off?.("pedidoAtualizado", notificarPedidoAtualizado);
       eventosNovoPedido.forEach((ev) => current?.off?.(ev, notificarPedido));
       eventosCaixaAberto.forEach((ev) => current?.off?.(ev, notificarCaixaAberto));
       eventosAcesso.forEach((ev) => current?.off?.(ev, acessoEncerrado));
@@ -632,8 +648,9 @@ export default function HubRestauranteScreen({ onLogout }) {
     if (!pedidosAReceber.length) return;
     pedidosAReceber.forEach((pedido) => {
       const id = String(getId(pedido) || pedido.numeroPedido || pedido.numero || "");
-      if (!id || pedidosNotificadosRef.current.has(id)) return;
-      pedidosNotificadosRef.current.add(id);
+      const dedupeKey = `${id}:novo`;
+      if (!id || pedidosNotificadosRef.current.has(dedupeKey)) return;
+      pedidosNotificadosRef.current.add(dedupeKey);
       const codigo = getPedidoCodigoHub(pedido);
       const cliente = pedido.nomeCliente || pedido.cliente || pedido.nome || "Cliente";
       const mensagem = `Pedido ${codigo ? `#${codigo} ` : ""}de ${cliente} chegou pela vitrine.`;

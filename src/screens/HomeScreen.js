@@ -106,6 +106,13 @@ const pickPedidoId = (p) => p?._id || p?.id || p?.pedidoId;
 const pickPedidoNumero = (p) => p?.numeroPedido || p?.numero_pedido || p?.pedidoNumero || p?.codigoPedido || p?.numero || p?.codigo || String(pickPedidoId(p) || "").slice(-6);
 const pickPedidoCliente = (p) => p?.nomeCliente || p?.cliente?.nome || p?.clienteNome || p?.mesaCliente || p?.cliente || "Cliente";
 const pickPedidoTotal = (p) => p?.total ?? p?.valorTotal ?? p?.valor ?? p?.subtotal ?? "";
+const normalizePedidoStatusForNotification = (p = {}) =>
+  String(p?.status || p?.statusPedido || p?.pedido?.status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[ -]/g, "_");
+const isPedidoEmProducao = (p = {}) =>
+  ["em_producao", "producao", "preparando", "em_preparo"].includes(normalizePedidoStatusForNotification(p));
 
 export default function HomeScreen({ navigation, onLogout }) {
   const { headerGradient } = useAppTheme();
@@ -154,23 +161,25 @@ export default function HomeScreen({ navigation, onLogout }) {
     try { setQueueCount(await getQueueCount()); } catch { setQueueCount(0); }
   }, []);
 
-  const notifyPedidoRecebido = useCallback(async (pedido = {}) => {
+  const notifyPedidoRecebido = useCallback(async (pedido = {}, tipo = "novo") => {
     const id = pickPedidoId(pedido) || pickPedidoNumero(pedido);
-    if (!id || notifiedPedidosRef.current.has(id)) return;
-    notifiedPedidosRef.current.add(id);
+    const dedupeKey = `${id || "sem-id"}:${tipo}`;
+    if (notifiedPedidosRef.current.has(dedupeKey)) return;
+    notifiedPedidosRef.current.add(dedupeKey);
 
     const numero = pickPedidoNumero(pedido);
     const cliente = pickPedidoCliente(pedido);
     const total = pickPedidoTotal(pedido);
-    const mensagem = `${numero ? `Pedido #${numero}` : "Novo pedido"} de ${cliente}${total ? ` • ${moneyBRL(total)}` : ""}`;
+    const emProducao = tipo === "em_producao" || isPedidoEmProducao(pedido);
+    const mensagem = `${numero ? `Pedido #${numero}` : "Pedido"} de ${cliente}${total ? ` • ${moneyBRL(total)}` : ""}`;
 
     if (Platform.OS === "web") {
-      try { await alertNovoPedido({ ...pedido, codigo: numero, cliente, total }); } catch (_) {}
+      try { await alertNovoPedido({ ...pedido, codigo: numero, cliente, total }, { emProducao }); } catch (_) {}
       return;
     }
 
     try { Vibration.vibrate([220, 90, 220]); } catch (_) {}
-    Alert.alert("📥 Pedido A Receber", mensagem);
+    Alert.alert(emProducao ? "🍳 Pedido em produção" : "📥 Novo pedido", mensagem);
   }, []);
 
   const fetchDashboard = useCallback(async ({ silent = false } = {}) => {
@@ -295,35 +304,50 @@ export default function HomeScreen({ navigation, onLogout }) {
 
   useEffect(() => {
     let socket;
+    let schedule;
+    let handleNovoPedido;
+    let handlePedidoAtualizado;
+    let handleCaixaAberto;
+    const eventosAtualizacao = ["mesaAtualizada", "mesaPedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaFechado"];
+    const eventosCaixa = ["caixaAberto", "caixa_aberto", "cashRegisterOpened"];
+    const eventosNovoPedido = ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado", "novoPedidoVitrine", "pedidoBalcaoCriado", "pedidoMesaCriado", "comandaCriada"];
+
     (async () => {
-      const s = await getSession();
-      const restauranteId = s?.restaurante?._id;
+      const currentSession = await getSession();
+      const restauranteId = currentSession?.restaurante?._id;
       if (!restauranteId) return;
       socket = connectSocket(restauranteId);
-      const schedule = () => {
+      schedule = () => {
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => fetchDashboard({ silent: true }), 600);
       };
-      const handleNovoPedido = (payload = {}) => {
+      handleNovoPedido = (payload = {}) => {
         const pedido = payload?.pedido || payload;
-        notifyPedidoRecebido(pedido);
+        notifyPedidoRecebido(pedido, "novo");
         schedule();
       };
-      const handleCaixaAberto = (payload = {}) => {
+      handlePedidoAtualizado = (payload = {}) => {
+        const pedido = payload?.pedido || payload;
+        if (isPedidoEmProducao(pedido)) notifyPedidoRecebido(pedido, "em_producao");
+        schedule();
+      };
+      handleCaixaAberto = (payload = {}) => {
         if (Platform.OS === "web") alertCaixaAberto(payload?.caixa || payload).catch(() => {});
         else Alert.alert("Caixa aberto", "O caixa do restaurante foi aberto.");
         schedule();
       };
-      ["mesaAtualizada", "mesaPedidoAtualizado", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaFechado"].forEach((ev) => socket.on(ev, schedule));
-      ["caixaAberto", "caixa_aberto", "cashRegisterOpened"].forEach((ev) => socket.on(ev, handleCaixaAberto));
-      ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado", "novoPedidoVitrine", "pedidoBalcaoCriado", "pedidoMesaCriado", "comandaCriada"].forEach((ev) => socket.on(ev, handleNovoPedido));
+      eventosAtualizacao.forEach((ev) => socket.on(ev, schedule));
+      socket.on("pedidoAtualizado", handlePedidoAtualizado);
+      eventosCaixa.forEach((ev) => socket.on(ev, handleCaixaAberto));
+      eventosNovoPedido.forEach((ev) => socket.on(ev, handleNovoPedido));
     })();
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      const s = getSocket();
-      ["mesaAtualizada", "mesaPedidoAtualizado", "pedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaFechado"].forEach((ev) => s?.off(ev));
-      ["caixaAberto", "caixa_aberto", "cashRegisterOpened"].forEach((ev) => s?.off(ev));
-      ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado", "novoPedidoVitrine", "pedidoBalcaoCriado", "pedidoMesaCriado", "comandaCriada"].forEach((ev) => s?.off(ev));
+      const currentSocket = getSocket();
+      if (schedule) eventosAtualizacao.forEach((ev) => currentSocket?.off(ev, schedule));
+      if (handlePedidoAtualizado) currentSocket?.off("pedidoAtualizado", handlePedidoAtualizado);
+      if (handleCaixaAberto) eventosCaixa.forEach((ev) => currentSocket?.off(ev, handleCaixaAberto));
+      if (handleNovoPedido) eventosNovoPedido.forEach((ev) => currentSocket?.off(ev, handleNovoPedido));
     };
   }, [fetchDashboard, notifyPedidoRecebido]);
 
