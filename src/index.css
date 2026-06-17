@@ -53,3 +53,46 @@ select,
     transform: translateZ(0);
   }
 }
+
+/* Movyo Hub PWA — estabilidade de toque/UX em iOS e Android */
+html, body, #root {
+  min-height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+[role="button"],
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+button,
+[role="button"],
+a {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+textarea,
+select {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+@supports (-webkit-touch-callout: none) {
+  body {
+    min-height: -webkit-fill-available;
+  }
+
+  button,
+  [role="button"] {
+    min-height: 44px;
+  }
+}

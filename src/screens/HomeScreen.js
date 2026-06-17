@@ -15,6 +15,7 @@ import {
   Platform,
   AppState,
   Vibration,
+  useWindowDimensions,
 } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { LinearGradient } from "expo-linear-gradient";
@@ -30,7 +31,8 @@ import { cachedApiGet, cacheGetData, cacheSet } from "../utils/smartCache";
 import { flushQueue, getQueueCount, startQueueWatcher } from "../utils/offlineQueue";
 import { alertCaixaAberto, alertNovoPedido } from "../utils/pwaNotifications";
 
-const RESUMO_CACHE_KEY = "garcom:dashboard:resumo:v4-dia-garcom";
+const RESUMO_CACHE_KEY = "garcom:dashboard:resumo:v5-live-garcom";
+const HOME_REFRESH_MS = 10000;
 
 const moneyBRL = (n) => {
   const v = Number(n || 0);
@@ -116,6 +118,9 @@ const isPedidoEmProducao = (p = {}) =>
 
 export default function HomeScreen({ navigation, onLogout }) {
   const { headerGradient } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 390;
+  const isTablet = width >= 700;
   const pulse = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
   const timerRef = useRef(null);
@@ -130,6 +135,7 @@ export default function HomeScreen({ navigation, onLogout }) {
   const [isOnline, setIsOnline] = useState(true);
   const [queueCount, setQueueCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [liveRefresh, setLiveRefresh] = useState(true);
   const notifiedPedidosRef = useRef(new Set());
 
   useEffect(() => {
@@ -303,6 +309,16 @@ export default function HomeScreen({ navigation, onLogout }) {
   }, [navigation, fetchDashboard]);
 
   useEffect(() => {
+    let intervalId;
+    const tick = () => {
+      const visible = Platform.OS !== "web" || typeof document === "undefined" || document.visibilityState === "visible";
+      if (visible && liveRefresh) fetchDashboard({ silent: true });
+    };
+    intervalId = setInterval(tick, HOME_REFRESH_MS);
+    return () => { if (intervalId) clearInterval(intervalId); };
+  }, [fetchDashboard, liveRefresh]);
+
+  useEffect(() => {
     let socket;
     let schedule;
     let handleNovoPedido;
@@ -337,6 +353,8 @@ export default function HomeScreen({ navigation, onLogout }) {
         schedule();
       };
       eventosAtualizacao.forEach((ev) => socket.on(ev, schedule));
+      socket.on("connect", schedule);
+      socket.on("reconnect", schedule);
       socket.on("pedidoAtualizado", handlePedidoAtualizado);
       eventosCaixa.forEach((ev) => socket.on(ev, handleCaixaAberto));
       eventosNovoPedido.forEach((ev) => socket.on(ev, handleNovoPedido));
@@ -344,7 +362,11 @@ export default function HomeScreen({ navigation, onLogout }) {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       const currentSocket = getSocket();
-      if (schedule) eventosAtualizacao.forEach((ev) => currentSocket?.off(ev, schedule));
+      if (schedule) {
+        eventosAtualizacao.forEach((ev) => currentSocket?.off(ev, schedule));
+        currentSocket?.off("connect", schedule);
+        currentSocket?.off("reconnect", schedule);
+      }
       if (handlePedidoAtualizado) currentSocket?.off("pedidoAtualizado", handlePedidoAtualizado);
       if (handleCaixaAberto) eventosCaixa.forEach((ev) => currentSocket?.off(ev, handleCaixaAberto));
       if (handleNovoPedido) eventosNovoPedido.forEach((ev) => currentSocket?.off(ev, handleNovoPedido));
@@ -387,8 +409,11 @@ export default function HomeScreen({ navigation, onLogout }) {
     <Animated.View style={[styles.skeleton, { height, width, opacity: shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] }) }]} />
   );
 
+  const cardWidthStyle = useMemo(() => ({ width: isCompact ? "100%" : isTablet ? "23.7%" : "48.5%" }), [isCompact, isTablet]);
+  const actionWidthStyle = useMemo(() => ({ width: isCompact ? "100%" : isTablet ? "31.8%" : "48.5%" }), [isCompact, isTablet]);
+
   const Kpi = ({ icon, label, value, sub }) => (
-    <Animated.View style={[styles.kpiCard, { transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }] }]}>
+    <Animated.View style={[styles.kpiCard, cardWidthStyle, { transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }] }]}>
       <View style={styles.kpiIcon}><Ionicons name={icon} size={18} color="#fff" /></View>
       {loading ? <Skeleton height={24} width="58%" /> : <Text style={styles.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>}
       <Text style={styles.kpiLabel}>{label}</Text>
@@ -396,8 +421,15 @@ export default function HomeScreen({ navigation, onLogout }) {
     </Animated.View>
   );
 
-  const Action = ({ icon, title, sub, onPress, badge }) => (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.actionCard, pressed && styles.pressed]}>
+  const Action = ({ icon, title, sub, onPress, badge, disabled = false }) => (
+    <Pressable
+      accessibilityRole="button"
+      hitSlop={6}
+      android_ripple={{ color: "rgba(8,51,88,0.08)", borderless: false }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [styles.actionCard, actionWidthStyle, pressed && styles.pressed, disabled && styles.disabledCard]}
+    >
       <View style={styles.actionTop}>
         <View style={styles.actionIcon}><Ionicons name={icon} size={20} color="#083358" /></View>
         {badge != null && <View style={styles.badge}><Text style={styles.badgeText}>{badge}</Text></View>}
@@ -422,6 +454,10 @@ export default function HomeScreen({ navigation, onLogout }) {
         </View>
 
         <View style={styles.statusRow}>
+          <Pressable onPress={() => setLiveRefresh((v) => !v)} style={[styles.statusPill, liveRefresh ? styles.statusLive : styles.statusPaused]}>
+            <Ionicons name={liveRefresh ? "radio-outline" : "pause-circle-outline"} size={14} color="#fff" />
+            <Text style={styles.statusText}>{liveRefresh ? "Resumo em tempo real" : "Atualização pausada"}</Text>
+          </Pressable>
           <View style={[styles.statusPill, !isOnline && styles.statusOffline]}>
             <Ionicons name={isOnline ? "cloud-done-outline" : "cloud-offline-outline"} size={14} color="#fff" />
             <Text style={styles.statusText}>{isOnline ? "Online e sincronizado" : "Modo offline ativo"}</Text>
@@ -464,7 +500,7 @@ export default function HomeScreen({ navigation, onLogout }) {
           />
           <Action icon="storefront-outline" title="Balcão" sub="Pedido rápido + PIX" onPress={() => navigation.navigate("Balcao")} />
           <Action icon="person-outline" title="Meu perfil" sub="Permissões e dados" onPress={() => navigation.navigate("MeuPerfil")} />
-          <Action icon="sync-outline" title="Sincronizar" sub="Enviar offline" badge={queueCount} onPress={syncNow} />
+          <Action icon="sync-outline" title="Sincronizar" sub={isOnline ? "Enviar offline" : "Sem internet"} badge={queueCount} onPress={syncNow} disabled={!isOnline || syncing} />
         </View>
 
         <Text style={styles.sectionTitle}>Ranking dos garçons</Text>
@@ -497,7 +533,9 @@ const styles = StyleSheet.create({
   hSub: { color: "rgba(255,255,255,0.82)", fontWeight: "700", marginTop: 2 },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.16)", alignItems: "center", justifyContent: "center" },
   statusRow: { marginTop: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  statusPill: { flex: 1, minHeight: 38, paddingHorizontal: 12, borderRadius: 999, backgroundColor: "rgba(34,197,94,0.24)", flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.20)" },
+  statusPill: { flex: 1, minHeight: 38, paddingHorizontal: 12, borderRadius: 999, backgroundColor: "rgba(34,197,94,0.24)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.20)" },
+  statusLive: { backgroundColor: "rgba(14,165,233,0.30)" },
+  statusPaused: { backgroundColor: "rgba(148,163,184,0.30)" },
   statusOffline: { backgroundColor: "rgba(245,158,11,0.28)" },
   statusText: { color: "#fff", fontWeight: "900", fontSize: 12 },
   syncPill: { minHeight: 38, paddingHorizontal: 12, borderRadius: 999, backgroundColor: "#fff", flexDirection: "row", alignItems: "center", gap: 7 },
@@ -507,7 +545,7 @@ const styles = StyleSheet.create({
   offlineBanner: { marginBottom: 14, padding: 12, borderRadius: 20, backgroundColor: "#fffbeb", borderWidth: 1, borderColor: "#fde68a", flexDirection: "row", gap: 9, alignItems: "flex-start" },
   offlineText: { flex: 1, color: "#92400e", fontWeight: "800", lineHeight: 18, fontSize: 12 },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  kpiCard: { width: "48.5%", minHeight: 132, padding: 14, borderRadius: 26, backgroundColor: "#fff", borderWidth: 1, borderColor: "rgba(15,23,42,0.07)", shadowColor: "#0f172a", shadowOpacity: 0.09, shadowRadius: 18, elevation: 3 },
+  kpiCard: { minHeight: 132, padding: 14, borderRadius: 26, backgroundColor: "#fff", borderWidth: 1, borderColor: "rgba(15,23,42,0.07)", shadowColor: "#0f172a", shadowOpacity: 0.09, shadowRadius: 18, elevation: 3 },
   kpiIcon: { width: 34, height: 34, borderRadius: 13, backgroundColor: "#083358", alignItems: "center", justifyContent: "center", marginBottom: 12 },
   kpiValue: { color: "#0f172a", fontSize: 23, fontWeight: "900", letterSpacing: -0.6 },
   kpiLabel: { color: "#334155", fontWeight: "900", marginTop: 4 },
@@ -515,8 +553,9 @@ const styles = StyleSheet.create({
   skeleton: { backgroundColor: "#e2e8f0", borderRadius: 999, marginTop: 4, marginBottom: 6 },
   sectionTitle: { marginTop: 20, marginBottom: 10, color: "#0f172a", fontWeight: "900", fontSize: 17, letterSpacing: -0.3 },
   actionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  actionCard: { width: "48.5%", minHeight: 126, borderRadius: 24, backgroundColor: "#fff", padding: 14, borderWidth: 1, borderColor: "rgba(15,23,42,0.07)", shadowColor: "#0f172a", shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
+  actionCard: { minHeight: 126, borderRadius: 24, backgroundColor: "#fff", padding: 14, borderWidth: 1, borderColor: "rgba(15,23,42,0.07)", shadowColor: "#0f172a", shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
   pressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
+  disabledCard: { opacity: 0.52 },
   actionTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   actionIcon: { width: 38, height: 38, borderRadius: 15, backgroundColor: "#eef6ff", alignItems: "center", justifyContent: "center" },
   badge: { minWidth: 28, height: 28, paddingHorizontal: 8, borderRadius: 999, backgroundColor: "#ff3b8a", alignItems: "center", justifyContent: "center" },

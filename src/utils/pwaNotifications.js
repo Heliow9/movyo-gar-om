@@ -4,6 +4,34 @@ const isBrowser = typeof window !== "undefined";
 const DEFAULT_SUBSCRIBE_URL = `${API_URL}/api/push/subscribe`;
 const DEFAULT_PUBLIC_KEY_URL = `${API_URL}/api/push/public-key`;
 
+const WEB_PUSH_SYNC_KEY = "movyo:webpush:lastSync";
+const WEB_PUSH_ENDPOINT_KEY = "movyo:webpush:endpoint";
+const WEB_PUSH_SYNC_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
+
+export function getStoredWebPushState() {
+  if (!isBrowser) return { connected: false, lastSync: null, endpoint: "" };
+  try {
+    const lastSync = window.localStorage.getItem(WEB_PUSH_SYNC_KEY);
+    const endpoint = window.localStorage.getItem(WEB_PUSH_ENDPOINT_KEY) || "";
+    const age = lastSync ? Date.now() - new Date(lastSync).getTime() : Infinity;
+    return {
+      connected: Notification?.permission === "granted" && !!endpoint && Number.isFinite(age) && age < WEB_PUSH_SYNC_MAX_AGE_MS,
+      lastSync,
+      endpoint,
+    };
+  } catch {
+    return { connected: false, lastSync: null, endpoint: "" };
+  }
+}
+
+function rememberWebPushSubscription(subscription) {
+  if (!isBrowser || !subscription) return;
+  try {
+    window.localStorage.setItem(WEB_PUSH_SYNC_KEY, new Date().toISOString());
+    window.localStorage.setItem(WEB_PUSH_ENDPOINT_KEY, subscription.endpoint || "");
+  } catch {}
+}
+
 export const isIOS = () => {
   if (!isBrowser) return false;
   const ua = window.navigator.userAgent || "";
@@ -212,14 +240,18 @@ export async function subscribeWebPush({
       throw new Error(payload?.message || payload?.mensagem || `Falha ao salvar inscrição push (${response.status}).`);
     }
 
-    try {
-      window.localStorage.setItem("movyo:webpush:lastSync", new Date().toISOString());
-      window.localStorage.setItem("movyo:webpush:endpoint", subscription.endpoint || "");
-    } catch {}
+    rememberWebPushSubscription(subscription);
 
     return { ok: true, permission: "granted", subscription, remote: true };
   } catch (error) {
     console.warn("[Movyo Push] Falha ao registrar push remoto:", error);
+    try {
+      const existing = await registration.pushManager.getSubscription();
+      if (existing && getStoredWebPushState().connected) {
+        rememberWebPushSubscription(existing);
+        return { ok: true, permission: "granted", subscription: existing, remote: "cached" };
+      }
+    } catch {}
     return {
       ok: false,
       permission: "granted",

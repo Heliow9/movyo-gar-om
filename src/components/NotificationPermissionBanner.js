@@ -3,6 +3,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native
 import { Ionicons } from "@expo/vector-icons";
 import {
   getNotificationPermission,
+  getStoredWebPushState,
   isIOS,
   isStandalonePWA,
   subscribeWebPush,
@@ -21,7 +22,9 @@ export default function NotificationPermissionBanner() {
   const [permission, setPermission] = useState(() =>
     Platform.OS === "web" ? getNotificationPermission() : "unsupported"
   );
-  const [remoteState, setRemoteState] = useState("idle");
+  const [remoteState, setRemoteState] = useState(() =>
+    Platform.OS === "web" && getStoredWebPushState().connected ? "connected" : "idle"
+  );
   const [remoteMessage, setRemoteMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -49,8 +52,12 @@ export default function NotificationPermissionBanner() {
 
   useEffect(() => {
     if (Platform.OS !== "web" || permission !== "granted" || remoteState !== "idle") return;
+    if (getStoredWebPushState().connected) {
+      setRemoteState("connected");
+      return;
+    }
     let active = true;
-    setRemoteState("checking");
+    // Evita mostrar “Conectando...” a cada abertura do PWA quando já existe push válido.
     runSubscription({ requestPermission: false })
       .then((result) => {
         if (!active) return;
@@ -64,6 +71,10 @@ export default function NotificationPermissionBanner() {
       })
       .catch((error) => {
         if (!active) return;
+        if (getStoredWebPushState().connected) {
+          setRemoteState("connected");
+          return;
+        }
         setRemoteState("error");
         setRemoteMessage(error?.message || "Push em segundo plano ainda não conectado.");
       });
@@ -97,7 +108,7 @@ export default function NotificationPermissionBanner() {
   if (Platform.OS !== "web" || hidden || (!needsInstall && !supportsWebPush())) return null;
 
   const denied = permission === "denied";
-  const connected = permission === "granted" && remoteState === "connected";
+  const connected = permission === "granted" && (remoteState === "connected" || getStoredWebPushState().connected);
   if (connected) return null;
 
   const title = needsInstall
@@ -127,7 +138,7 @@ export default function NotificationPermissionBanner() {
         {!needsInstall && !denied ? (
           <Pressable style={styles.button} onPress={activate} disabled={busy || remoteState === "checking"}>
             <Text style={styles.buttonText}>
-              {busy || remoteState === "checking" ? "Conectando..." : permission === "granted" ? "Tentar conectar" : "Ativar agora"}
+              {busy ? "Conectando..." : permission === "granted" ? "Tentar conectar" : "Ativar agora"}
             </Text>
           </Pressable>
         ) : null}
