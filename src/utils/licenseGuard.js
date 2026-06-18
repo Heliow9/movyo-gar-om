@@ -117,7 +117,7 @@ export function getRestauranteAccessBlockInfo(restaurante) {
     return { code: ACCESS_CODES.RESTAURANTE_BLOQUEADO, message: RESTAURANTE_BLOQUEADO_MSG, reason: "blocked" };
   }
   if (isLicencaVencida(restaurante)) {
-    return { code: ACCESS_CODES.LICENCA_VENCIDA, message: LICENCA_VENCIDA_MSG, reason: "expired" };
+    return { code: ACCESS_CODES.LICENCA_VENCIDA, message: LICENCA_VENCIDA_MSG, reason: "expired", restauranteId: restaurante?._id || restaurante?.id || restaurante?.restauranteId || restaurante?.assinaturaCobranca?.restauranteId || null, assinaturaCobranca: restaurante?.assinaturaCobranca || null };
   }
   return null;
 }
@@ -133,7 +133,7 @@ export function getAuthBlockInfoFromError(err) {
   const s = text(msg);
 
   if (code === ACCESS_CODES.LICENCA_VENCIDA) {
-    return { code, message: LICENCA_VENCIDA_MSG, reason: "expired" };
+    return { code, message: LICENCA_VENCIDA_MSG, reason: "expired", restauranteId: data?.restauranteId || data?.assinaturaCobranca?.restauranteId || null, assinaturaCobranca: data?.assinaturaCobranca || null };
   }
   if (code === ACCESS_CODES.RESTAURANTE_BLOQUEADO) {
     return { code, message: RESTAURANTE_BLOQUEADO_MSG, reason: "blocked" };
@@ -143,10 +143,10 @@ export function getAuthBlockInfoFromError(err) {
   }
 
   if ((s.includes("licen") || s.includes("assinatura") || s.includes("plano")) && (s.includes("venc") || s.includes("expir"))) {
-    return { code: ACCESS_CODES.LICENCA_VENCIDA, message: LICENCA_VENCIDA_MSG, reason: "expired" };
+    return { code: ACCESS_CODES.LICENCA_VENCIDA, message: LICENCA_VENCIDA_MSG, reason: "expired", restauranteId: data?.restauranteId || data?.assinaturaCobranca?.restauranteId || null, assinaturaCobranca: data?.assinaturaCobranca || null };
   }
   if (EXPIRED_WORDS.some((word) => s.includes(word))) {
-    return { code: ACCESS_CODES.LICENCA_VENCIDA, message: LICENCA_VENCIDA_MSG, reason: "expired" };
+    return { code: ACCESS_CODES.LICENCA_VENCIDA, message: LICENCA_VENCIDA_MSG, reason: "expired", restauranteId: data?.restauranteId || data?.assinaturaCobranca?.restauranteId || null, assinaturaCobranca: data?.assinaturaCobranca || null };
   }
 
   if (s.includes("restaurante bloque") || s.includes("restaurante desativ") || s.includes("restaurante inativ") || s.includes("conta bloque")) {

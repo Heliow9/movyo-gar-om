@@ -140,6 +140,7 @@ const formatDateBR = (date) => {
 };
 
 const getLicenseInfo = (restaurante = {}) => {
+  const billing = restaurante?.assinaturaCobranca || restaurante?.billing || null;
   const values = LICENSE_DATE_FIELDS.map((field) => parseLicenseDate(restaurante?.[field])).filter(Boolean);
   const vencimento = values.length ? values.sort((a, b) => a.getTime() - b.getTime())[0] : null;
 
@@ -151,6 +152,7 @@ const getLicenseInfo = (restaurante = {}) => {
       subtitle: "Não encontrei a data de vencimento no cadastro.",
       tone: "neutral",
       icon: "shield-checkmark-outline",
+      billing,
     };
   }
 
@@ -167,6 +169,7 @@ const getLicenseInfo = (restaurante = {}) => {
       subtitle: `Venceu em ${formatDateBR(vencimento)}. Regularize para continuar usando o Movyo.`,
       tone: "danger",
       icon: "alert-circle-outline",
+      billing,
     };
   }
 
@@ -178,6 +181,7 @@ const getLicenseInfo = (restaurante = {}) => {
       subtitle: "A licença expira hoje. Regularize para evitar bloqueio do acesso.",
       tone: "warning",
       icon: "time-outline",
+      billing,
     };
   }
 
@@ -189,6 +193,7 @@ const getLicenseInfo = (restaurante = {}) => {
     subtitle: `Licença válida até ${formatDateBR(vencimento)}.${warning ? " Renove em breve para evitar interrupção." : " Tudo certo por aqui."}`,
     tone: warning ? "warning" : "success",
     icon: warning ? "timer-outline" : "checkmark-circle-outline",
+    billing,
   };
 };
 const emptyProduto = () => ({ nome: "", descricao: "", precoBase: "", imagem: "", categoria: "", sabores: [], bordas: [], adicionais: [], complementos: [], extras: {}, receita: "", destaque: false, ativoVitrine: true, imprimir: true });
@@ -1539,6 +1544,11 @@ function Metric({ label, value, icon, tone = "pink" }) {
 }
 
 function LicenseStatusCard({ info }) {
+  const [billing, setBilling] = useState(info?.billing || null);
+  const [pixLoading, setPixLoading] = useState(false);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  useEffect(() => { setBilling(info?.billing || null); setPaymentConfirmed(false); }, [info?.billing]);
+
   const palette = {
     success: { bg: "#ecfdf5", border: "#bbf7d0", iconBg: "#dcfce7", icon: "#16a34a", title: "#166534", chipBg: "#bbf7d0", chipText: "#166534" },
     warning: { bg: "#fffbeb", border: "#fde68a", iconBg: "#fef3c7", icon: "#f59e0b", title: "#92400e", chipBg: "#fde68a", chipText: "#92400e" },
@@ -1546,13 +1556,59 @@ function LicenseStatusCard({ info }) {
     neutral: { bg: "#f8fafc", border: "#e2e8f0", iconBg: "#f1f5f9", icon: "#64748b", title: "#334155", chipBg: "#e2e8f0", chipText: "#334155" },
   };
   const p = palette[info?.tone] || palette.neutral;
-  const chipText = info?.hasDate
+  const descontoPct = Number(billing?.descontoPercentual || 0);
+  const mostrarPix = !!billing?.mostrarPix;
+  const cobranca = billing?.cobranca || null;
+  const pixCode = cobranca?.qrCode || cobranca?.pixCopiaECola || "";
+  const confirmed = paymentConfirmed || !!billing?.pagamentoConfirmado;
+  const chipText = confirmed
+    ? "Pago"
+    : info?.hasDate
     ? info.daysLeft < 0
       ? "Vencida"
       : info.daysLeft === 0
         ? "Vence hoje"
         : `${info.daysLeft} ${info.daysLeft === 1 ? "dia" : "dias"}`
     : "Sem data";
+
+  const gerarPix = async () => {
+    try {
+      setPixLoading(true);
+      const res = await api.post("/api/restaurantes/cobranca/pix");
+      setBilling(res?.data?.resumo || billing);
+      Alert.alert("Pix gerado", "O Pix da mensalidade foi gerado. A liberacao e automatica apos a confirmacao do pagamento.");
+    } catch (err) {
+      Alert.alert("Pix indisponivel", err?.response?.data?.mensagem || err?.message || "Nao foi possivel gerar o Pix agora.");
+    } finally {
+      setPixLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if ((!pixCode && !cobranca?.paymentId) || confirmed) return undefined;
+    let cancelled = false;
+    const consultarStatus = async () => {
+      try {
+        const res = await api.get("/api/restaurantes/cobranca/resumo");
+        if (cancelled) return;
+        const next = res?.data || null;
+        if (next) setBilling(next);
+        const aprovado = !!next?.pagamentoConfirmado || (Number(next?.diasParaVencer) > 3 && !next?.mostrarPix && !next?.cobranca);
+        if (aprovado) {
+          setPaymentConfirmed(true);
+          Alert.alert("Pagamento aprovado", "Mensalidade confirmada. A licenca foi renovada automaticamente.");
+          if (Platform.OS === "web" && typeof window !== "undefined") setTimeout(() => window.location.reload(), 1500);
+        }
+      } catch (_) {}
+    };
+    const firstTimer = setTimeout(consultarStatus, 2500);
+    const interval = setInterval(consultarStatus, 7000);
+    return () => {
+      cancelled = true;
+      clearTimeout(firstTimer);
+      clearInterval(interval);
+    };
+  }, [pixCode, cobranca?.paymentId, confirmed]);
 
   return (
     <View style={[styles.licenseCard, { backgroundColor: p.bg, borderColor: p.border }]}> 
@@ -1563,6 +1619,22 @@ function LicenseStatusCard({ info }) {
         <Text style={[styles.licenseKicker, { color: p.title }]}>LICENÇA MOVYO</Text>
         <Text style={[styles.licenseTitle, { color: p.title }]}>{info?.title || "Status da licença"}</Text>
         <Text style={styles.licenseSubtitle}>{info?.subtitle || "Acompanhe o vencimento da licença do restaurante."}</Text>
+        {billing?.valorPlano > 0 ? (
+          <View style={{ marginTop: 10, gap: 4 }}>
+            <Text style={styles.licenseSubtitle}>Plano: {billing.planoNome || billing.planoCodigo} - {moeda(billing.valorPlano)}/mes</Text>
+            {descontoPct > 0 ? <Text style={[styles.licenseTitle, { color: "#16a34a", fontSize: 15 }]}>Desconto especial de {descontoPct}%: economia de {moeda(billing.descontoValor)} neste mes.</Text> : null}
+            <Text style={[styles.licenseSubtitle, { fontWeight: "900" }]}>Total para renovar: {moeda(billing.valorFinal)}</Text>
+            {mostrarPix ? (
+              <Pressable onPress={gerarPix} disabled={pixLoading} style={({ pressed }) => [{ marginTop: 8, alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: "#ff3b8a", opacity: pressed || pixLoading ? 0.72 : 1, flexDirection: "row", alignItems: "center", gap: 8 }]}>
+                {pixLoading ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="qr-code-outline" size={17} color="#fff" />}
+                <Text style={{ color: "#fff", fontWeight: "900" }}>{cobranca?.qrCode ? "Pix gerado" : "Gerar Pix"}</Text>
+              </Pressable>
+            ) : null}
+            {confirmed ? <Text style={[styles.licenseTitle, { color: "#16a34a", fontSize: 15 }]}>Pagamento recebido. Licenca renovada.</Text> : null}
+            {!!cobranca?.qrCodeBase64 ? <Image source={{ uri: `data:image/png;base64,${cobranca.qrCodeBase64}` }} style={{ width: 180, height: 180, borderRadius: 12, marginTop: 8, backgroundColor: "#fff" }} /> : null}
+            {!!cobranca?.qrCode ? <Text numberOfLines={2} selectable style={[styles.licenseSubtitle, { fontSize: 11 }]}>{cobranca.qrCode}</Text> : null}
+          </View>
+        ) : null}
       </View>
       <View style={[styles.licenseChip, { backgroundColor: p.chipBg }]}> 
         <Text style={[styles.licenseChipText, { color: p.chipText }]}>{chipText}</Text>

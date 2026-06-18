@@ -62,7 +62,7 @@ api.interceptors.response.use(
     const isLoginRequest = url.includes("/api/garcons/login") || url.includes("/api/restaurantes/login");
 
     if (!isLoginRequest && accessBlock) {
-      authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", status, code: accessBlock.code, reason: accessBlock.reason, message: accessBlock.message });
+      authEvents.emit({ type: "AUTH_LOGOUT_REQUIRED", status, code: accessBlock.code, reason: accessBlock.reason, message: accessBlock.message, restauranteId: accessBlock.restauranteId, assinaturaCobranca: accessBlock.assinaturaCobranca });
       return Promise.reject(err);
     }
 

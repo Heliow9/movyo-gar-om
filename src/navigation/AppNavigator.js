@@ -135,7 +135,7 @@ export default function AppNavigator() {
       }
 
       if (ev?.type === "AUTH_LOGOUT_REQUIRED") {
-        await forceLogout({ code: ev?.code, reason: ev?.reason, message: ev?.message || "Sua sessão foi encerrada." });
+        await forceLogout({ code: ev?.code, reason: ev?.reason, message: ev?.message || "Sua sessão foi encerrada.", restauranteId: ev?.restauranteId, assinaturaCobranca: ev?.assinaturaCobranca });
       }
     });
     return off;
