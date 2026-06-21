@@ -5,9 +5,10 @@ const UIContext = createContext();
 
 export const UIProvider = ({ children }) => {
   const [fullscreen, setFullscreen] = useState(false);
+  const [abrirModalPedido, setAbrirModalPedido] = useState(false);
 
   return (
-    <UIContext.Provider value={{ fullscreen, setFullscreen }}>
+    <UIContext.Provider value={{ fullscreen, setFullscreen, abrirModalPedido, setAbrirModalPedido }}>
       {children}
     </UIContext.Provider>
   );

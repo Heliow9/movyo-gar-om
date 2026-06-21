@@ -6,6 +6,22 @@ import { Box, Button, Typography, useMediaQuery, useTheme, TextField, MenuItem }
 import { usePedidos } from '../Context/PedidosContext';
 
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:10000";
+
+function parseBRL(value) {
+  const normalized = String(value || "").replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getAuthHeaders() {
+  const token =
+    localStorage.getItem("token") ||
+    localStorage.getItem("_token") ||
+    localStorage.getItem("tokenRestaurante");
+  return token ? { Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}` } : {};
+}
+
 const ModalPedido = ({ isOpen, onClose }) => {
   const { triggerAtualizacao } = usePedidos();
 
@@ -103,11 +119,12 @@ const ModalPedido = ({ isOpen, onClose }) => {
   async function handleRegisterPedido() {
     const payload = {
       numeroPedido: formData.numeroPedido,
-      nomeCliente: formData.nomeCliente,
+      nomeCliente: formData.nome,
       telefoneCliente: formData.telefone,
-      valorTotal: formData.valor,
+      valorTotal: parseBRL(formData.valor),
+      formaPagamento: formData.pagamento,
       formadePagamento: formData.pagamento,
-      descricaoPedido: formData.descricaoPedido,
+      descricaoPedido: formData.descricao,
       enderecoCliente: formData.endereco,
       numero: formData.numero,
       complemento: formData.complemento,
@@ -120,10 +137,11 @@ const ModalPedido = ({ isOpen, onClose }) => {
     };
     
     try {
-      const response = await fetch("https://gotrackapi.onrender.com/api/pedidos", {
+      const response = await fetch(`${API_BASE}/api/pedidos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(payload),
       });
@@ -303,4 +321,3 @@ else {
 };
 
 export default ModalPedido;
-

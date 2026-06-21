@@ -209,8 +209,11 @@ const ModalProduto = ({ open, onClose, produto }) => {
   const validate = () => {
     if (isPizza) {
       if (maxSabores > 1) {
-        if (saboresSelecionados.length !== maxSabores) {
-          return `Selecione exatamente ${maxSabores} sabor(es).`;
+        if (saboresSelecionados.length < 1) {
+          return "Selecione pelo menos 1 sabor.";
+        }
+        if (saboresSelecionados.length > maxSabores) {
+          return `Selecione no maximo ${maxSabores} sabor(es).`;
         }
       } else {
         if (saboresDisp.length >= 1 && saboresSelecionados.length !== 1) {
@@ -397,7 +400,7 @@ const ModalProduto = ({ open, onClose, produto }) => {
           {isPizza && saboresDisp.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                Sabores {isPizzaMultiSabor ? `(escolha exatamente ${maxSabores})` : ""}
+                Sabores {isPizzaMultiSabor ? `(escolha ate ${maxSabores})` : ""}
               </Typography>
 
               {maxSabores === 1 ? (

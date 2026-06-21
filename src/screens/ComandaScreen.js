@@ -560,7 +560,8 @@ function ModalConfigProdutoMobile({ visible, onClose, produto, onConfirm }) {
       const sabores = Array.isArray(produto?.saboresDisponiveis) ? produto.saboresDisponiveis : [];
 
       if (sabores.length > 1) {
-        if (saboresSelecionados.length !== max) return `Selecione exatamente ${max} sabor(es).`;
+        if (saboresSelecionados.length < 1) return "Selecione pelo menos 1 sabor.";
+        if (saboresSelecionados.length > max) return `Selecione no maximo ${max} sabor(es).`;
       } else if (sabores.length === 1 && saboresSelecionados.length !== 1) {
         return "Selecione o sabor da pizza.";
       }
@@ -676,7 +677,7 @@ function ModalConfigProdutoMobile({ visible, onClose, produto, onConfirm }) {
                   {isPizza && sabores.length > 0 && (
                     <View style={styles.block}>
                       <Text style={styles.blockTitle}>
-                        Sabores {pizzaMulti ? `(escolha exatamente ${maxSabores})` : ""}
+                        Sabores {pizzaMulti ? `(escolha ate ${maxSabores})` : ""}
                       </Text>
 
                       {sabores.length === 1 || maxSabores === 1 ? (

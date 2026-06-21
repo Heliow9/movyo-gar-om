@@ -27,8 +27,16 @@ import { usePedidos } from "../Context/PedidosContext";
 import { io } from "socket.io-client";
 import { alertNovoPedido } from "../utils/pwaNotifications";
 
-const API_BASE = "http://localhost:10000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:10000";
 const PEDIDOS_POR_ENTREGADOR = 3;
+
+const getAuthHeaders = () => {
+  const token =
+    localStorage.getItem("token") ||
+    localStorage.getItem("_token") ||
+    localStorage.getItem("tokenRestaurante");
+  return token ? { Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}` } : {};
+};
 
 
 const PedidosEmAndamento = () => {
@@ -138,7 +146,7 @@ const PedidosEmAndamento = () => {
 
     async function handlerGetPedidos() {
       try {
-        const response = await axios.get(`${API_BASE}/api/pedidos/${restauranteId}`);
+        const response = await axios.get(`${API_BASE}/api/pedidos/${restauranteId}`, { headers: getAuthHeaders() });
         console.log("Pedidos API:", response.data);
         setPedidos(Array.isArray(response.data) ? response.data : (response.data?.pedidos || []));
         setPedidosMap(Array.isArray(response.data) ? response.data : (response.data?.pedidos || []));
@@ -162,14 +170,16 @@ const PedidosEmAndamento = () => {
         restauranteId,
       });
 
-      setTimeout(() => {
-        axios
-          .get(`${API_BASE}/api/pedidos/${pedidoId}`)
+        setTimeout(() => {
+          axios
+          .get(`${API_BASE}/api/pedidos/pedido/${pedidoId}`, { headers: getAuthHeaders() })
           .then((res) => {
-            if (res.data.status === "aguardando_resposta") {
-              return axios.put(`${API_BASE}/api/pedidos/${pedidoId}`, {
+            const statusAtual = res.data?.status || res.data?.pedido?.status;
+            if (statusAtual === "aguardando_resposta") {
+              return axios.put(`${API_BASE}/api/pedidos/status/${pedidoId}`, {
                 status: "em_entrega",
-              });
+                restauranteId,
+              }, { headers: getAuthHeaders() });
             }
           })
           .then(() => {
@@ -236,9 +246,10 @@ const PedidosEmAndamento = () => {
 
         setTimeout(() => {
           axios
-            .put(`${API_BASE}/api/pedidos/${pedidoId}`, {
+            .put(`${API_BASE}/api/pedidos/status/${pedidoId}`, {
               status: "em_entrega",
-            })
+              restauranteId,
+            }, { headers: getAuthHeaders() })
             .then(() => {
               setIsSendingPedido((prev) => ({
                 ...prev,

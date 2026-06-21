@@ -328,9 +328,21 @@ export async function alertNovoPedido(pedido = {}, options = {}) {
   });
 }
 
+function getHoraCaixa(payload = {}, campo = "abertoEm") {
+  const raw = payload?.[campo] || payload?.hora;
+  if (typeof raw === "string") {
+    const local = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+    const hasTimezone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(raw.trim());
+    if (local && !hasTimezone) return `${local[4]}:${local[5]}`;
+  }
+  const date = raw ? new Date(raw) : new Date();
+  if (Number.isNaN(date.getTime())) return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+}
+
 export async function alertCaixaAberto(payload = {}) {
   const operador = payload?.operador?.nome || payload?.operadorNome || payload?.nomeOperador || payload?.usuario?.nome || "Operador";
-  const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const hora = getHoraCaixa(payload, "abertoEm");
 
   vibrate([180, 70, 180]);
   playNotificationSound();
@@ -338,6 +350,21 @@ export async function alertCaixaAberto(payload = {}) {
   await showLocalNotification("Caixa aberto na Movyo", {
     body: `${operador} abriu o caixa às ${hora}.`,
     tag: `caixa-aberto-${payload?._id || payload?.id || Date.now()}`,
+    renotify: true,
+    data: { url: "/", screen: "Home", caixaId: payload?._id || payload?.id },
+  });
+}
+
+export async function alertCaixaFechado(payload = {}) {
+  const operador = payload?.operador?.nome || payload?.operadorNome || payload?.nomeOperador || payload?.usuario?.nome || "Operador";
+  const hora = getHoraCaixa(payload, "fechadoEm");
+
+  vibrate([160, 70, 160]);
+  playNotificationSound();
+
+  await showLocalNotification("Caixa fechado na Movyo", {
+    body: `${operador} fechou o caixa as ${hora}.`,
+    tag: `caixa-fechado-${payload?._id || payload?.id || Date.now()}`,
     renotify: true,
     data: { url: "/", screen: "Home", caixaId: payload?._id || payload?.id },
   });

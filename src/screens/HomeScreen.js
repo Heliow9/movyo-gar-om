@@ -29,7 +29,7 @@ import { connectSocket, getSocket } from "../socket/socket";
 import { useAppTheme } from "../theme/ThemeProvider";
 import { cachedApiGet, cacheGetData, cacheSet } from "../utils/smartCache";
 import { flushQueue, getQueueCount, startQueueWatcher } from "../utils/offlineQueue";
-import { alertCaixaAberto, alertNovoPedido } from "../utils/pwaNotifications";
+import { alertCaixaAberto, alertCaixaFechado, alertNovoPedido } from "../utils/pwaNotifications";
 
 const RESUMO_CACHE_KEY = "garcom:dashboard:resumo:v5-live-garcom";
 const HOME_REFRESH_MS = 10000;
@@ -324,8 +324,10 @@ export default function HomeScreen({ navigation, onLogout }) {
     let handleNovoPedido;
     let handlePedidoAtualizado;
     let handleCaixaAberto;
+    let handleCaixaFechado;
     const eventosAtualizacao = ["mesaAtualizada", "mesaPedidoAtualizado", "pagamentoAtualizado", "balcaoAtualizado", "filaPedidosAtualizada", "rankingGarconsAtualizado", "resumoGarcomAtualizado", "atendimentoAtualizado", "mesaCriada", "mesaExcluida", "caixaAtualizado", "caixaFechado"];
     const eventosCaixa = ["caixaAberto", "caixa_aberto", "cashRegisterOpened"];
+    const eventosCaixaFechado = ["caixaFechado", "caixa_fechado", "cashRegisterClosed"];
     const eventosNovoPedido = ["novoPedido", "pedidoCriado", "pedidoRecebido", "pedidoVitrineCriado", "vitrinePedidoCriado", "deliveryPedidoCriado", "novoPedidoVitrine", "pedidoBalcaoCriado", "pedidoMesaCriado", "comandaCriada"];
 
     (async () => {
@@ -352,11 +354,17 @@ export default function HomeScreen({ navigation, onLogout }) {
         else Alert.alert("Caixa aberto", "O caixa do restaurante foi aberto.");
         schedule();
       };
+      handleCaixaFechado = (payload = {}) => {
+        if (Platform.OS === "web") alertCaixaFechado(payload?.caixa || payload).catch(() => {});
+        else Alert.alert("Caixa fechado", "O caixa do restaurante foi fechado.");
+        schedule();
+      };
       eventosAtualizacao.forEach((ev) => socket.on(ev, schedule));
       socket.on("connect", schedule);
       socket.on("reconnect", schedule);
       socket.on("pedidoAtualizado", handlePedidoAtualizado);
       eventosCaixa.forEach((ev) => socket.on(ev, handleCaixaAberto));
+      eventosCaixaFechado.forEach((ev) => socket.on(ev, handleCaixaFechado));
       eventosNovoPedido.forEach((ev) => socket.on(ev, handleNovoPedido));
     })();
     return () => {
@@ -369,6 +377,7 @@ export default function HomeScreen({ navigation, onLogout }) {
       }
       if (handlePedidoAtualizado) currentSocket?.off("pedidoAtualizado", handlePedidoAtualizado);
       if (handleCaixaAberto) eventosCaixa.forEach((ev) => currentSocket?.off(ev, handleCaixaAberto));
+      if (handleCaixaFechado) eventosCaixaFechado.forEach((ev) => currentSocket?.off(ev, handleCaixaFechado));
       if (handleNovoPedido) eventosNovoPedido.forEach((ev) => currentSocket?.off(ev, handleNovoPedido));
     };
   }, [fetchDashboard, notifyPedidoRecebido]);

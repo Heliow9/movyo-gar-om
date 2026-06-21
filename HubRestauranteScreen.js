@@ -29,7 +29,7 @@ import { getAuthBlockInfoFromError, getRestauranteAccessBlockInfo } from "../uti
 import { connectSocket, getSocket, onSocketState } from "../socket/socket";
 import { alertCaixaAberto, alertCaixaFechado, alertNovoPedido } from "../utils/pwaNotifications";
 
-const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza", PIZZA_DUAS: "pizza_duas" };
+const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza" };
 const MOCK_IMAGE = "https://cdn.pixabay.com/photo/2017/12/09/08/18/pizza-3007395_960_720.jpg";
 const moeda = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const onlyNumber = (v) => String(v || "").replace(/[^0-9.,-]/g, "").replace(",", ".");
@@ -685,11 +685,11 @@ export default function HubRestauranteScreen({ onLogout }) {
   const setCategoriaTipo = (tipoCategoria) => setCategoriaForm((prev) => ({
     ...prev,
     tipoCategoria,
-    pizzaMultisabor: tipoCategoria === TIPO_CATEGORIA.PIZZA_DUAS,
+    pizzaMultisabor: false,
     permiteSabores: tipoCategoria !== TIPO_CATEGORIA.SIMPLES,
     permiteBordas: tipoCategoria === TIPO_CATEGORIA.SIMPLES ? false : prev.permiteBordas,
     permiteAdicionais: tipoCategoria === TIPO_CATEGORIA.SIMPLES ? false : prev.permiteAdicionais,
-    calculoPrecoPor: tipoCategoria === TIPO_CATEGORIA.PIZZA_DUAS ? prev.calculoPrecoPor || "maior" : "maior",
+    calculoPrecoPor: "maior",
   }));
 
   const normalizarTipoExtra = (t) => ({
@@ -719,7 +719,15 @@ export default function HubRestauranteScreen({ onLogout }) {
   const removerTipoExtraCategoria = (index) => setCategoriaForm((prev) => ({ ...prev, tiposExtras: (prev.tiposExtras || []).filter((_, i) => i !== index) }));
   const iniciarEdicaoCategoria = (cat) => {
     setCategoriaEditandoId(getId(cat));
-    setCategoriaForm({ ...emptyCategoria(), ...cat, ativa: cat.ativa !== false, tipoCategoria: cat.tipoCategoria || (cat.pizzaMultisabor ? TIPO_CATEGORIA.PIZZA_DUAS : cat.permiteSabores ? TIPO_CATEGORIA.PIZZA : TIPO_CATEGORIA.SIMPLES), tiposExtras: Array.isArray(cat.tiposExtras) ? cat.tiposExtras : [] });
+    setCategoriaForm({
+      ...emptyCategoria(),
+      ...cat,
+      ativa: cat.ativa !== false,
+      tipoCategoria: cat.tipoCategoria === TIPO_CATEGORIA.SIMPLES ? TIPO_CATEGORIA.SIMPLES : (cat.permiteSabores || cat.pizzaMultisabor || cat.tipoCategoria === "pizza" ? TIPO_CATEGORIA.PIZZA : TIPO_CATEGORIA.SIMPLES),
+      pizzaMultisabor: false,
+      calculoPrecoPor: "maior",
+      tiposExtras: Array.isArray(cat.tiposExtras) ? cat.tiposExtras : []
+    });
     setTab("categorias");
   };
   const limparCategoria = () => { setCategoriaForm(emptyCategoria()); setCategoriaEditandoId(null); setTipoExtraForm(emptyTipoExtra()); setTipoExtraItem(emptyItemPreco()); };
@@ -727,7 +735,7 @@ export default function HubRestauranteScreen({ onLogout }) {
   const salvarCategoria = async () => {
     if (!categoriaForm.nome.trim()) return Alert.alert("Ops", "Informe o nome da categoria.");
     await runAction(categoriaEditandoId ? "Salvando categoria..." : "Criando categoria...", async () => {
-      const payload = { ...categoriaForm, nome: categoriaForm.nome.trim(), restaurante: restauranteId, tiposExtras: (categoriaForm.tiposExtras || []).map(normalizarTipoExtra) };
+      const payload = { ...categoriaForm, nome: categoriaForm.nome.trim(), restaurante: restauranteId, pizzaMultisabor: false, calculoPrecoPor: "maior", tiposExtras: (categoriaForm.tiposExtras || []).map(normalizarTipoExtra) };
       if (categoriaEditandoId) await api.put(`/api/categorias/${categoriaEditandoId}`, payload); else await api.post("/api/categorias", payload);
       limparCategoria();
       await load({ silent: true });
@@ -1693,16 +1701,14 @@ function LicenseStatusCard({ info }) {
 function CategoriasView(props) {
   const { categoriaForm, setCategoriaForm, setCategoriaTipo, tipoExtraForm, setTipoExtraForm, tipoExtraItem, setTipoExtraItem, adicionarItemAoTipoExtra, adicionarTipoExtraCategoria, removerTipoExtraCategoria, salvarCategoria, limparCategoria, categoriaEditandoId, categorias, categoriasFiltradas, categoriaBusca, setCategoriaBusca, iniciarEdicaoCategoria, deletarCategoria } = props;
   return <>
-    <Card title={categoriaEditandoId ? "Editar categoria" : "Cadastrar categoria"} icon="albums-outline" subtitle="Configure categorias simples, pizzas, bordas, adicionais e extras." action={(categoriaEditandoId || categoriaForm.nome) ? <MiniButton title="Limpar" icon="close-outline" onPress={limparCategoria} /> : null}>
-      <View style={styles.formHero}><Ionicons name="sparkles-outline" size={20} color="#ff3b8a" /><Text style={styles.formHeroText}>Use categorias para controlar o comportamento do cardápio e liberar opções no produto.</Text></View>
+    <Card title={categoriaEditandoId ? "Editar categoria" : "Cadastrar categoria"} icon="albums-outline" subtitle="Configure categorias simples ou pizza; sabores e cálculo ficam no produto." action={(categoriaEditandoId || categoriaForm.nome) ? <MiniButton title="Limpar" icon="close-outline" onPress={limparCategoria} /> : null}>
+      <View style={styles.formHero}><Ionicons name="sparkles-outline" size={20} color="#ff3b8a" /><Text style={styles.formHeroText}>Use categorias para liberar bordas, adicionais e grupos extras. Quantidade de sabores e cálculo de pizza são definidos no item.</Text></View>
       <Field label="Nome da categoria" value={categoriaForm.nome} onChangeText={(v) => setCategoriaForm({ ...categoriaForm, nome: v })} />
       <Text style={styles.label}>Tipo da categoria</Text>
       <View style={styles.chipRow}>
         <OptionChip icon="fast-food-outline" label="Simples" active={categoriaForm.tipoCategoria === TIPO_CATEGORIA.SIMPLES} onPress={() => setCategoriaTipo(TIPO_CATEGORIA.SIMPLES)} />
         <OptionChip icon="pizza-outline" label="Pizza" active={categoriaForm.tipoCategoria === TIPO_CATEGORIA.PIZZA} onPress={() => setCategoriaTipo(TIPO_CATEGORIA.PIZZA)} />
-        <OptionChip icon="git-merge-outline" label="Pizza 2 sabores" active={categoriaForm.tipoCategoria === TIPO_CATEGORIA.PIZZA_DUAS} onPress={() => setCategoriaTipo(TIPO_CATEGORIA.PIZZA_DUAS)} />
       </View>
-      {categoriaForm.tipoCategoria === TIPO_CATEGORIA.PIZZA_DUAS ? <Text style={styles.infoBox}>Pizza 2 sabores: cliente escolhe 2 sabores e o preço pode seguir maior valor ou média.</Text> : null}
       {categoriaForm.tipoCategoria !== TIPO_CATEGORIA.SIMPLES ? <>
         <ToggleLine label="Permite bordas" value={categoriaForm.permiteBordas} onValueChange={(v) => setCategoriaForm({ ...categoriaForm, permiteBordas: v })} />
         <ToggleLine label="Permite adicionais" value={categoriaForm.permiteAdicionais} onValueChange={(v) => setCategoriaForm({ ...categoriaForm, permiteAdicionais: v })} />
@@ -1743,9 +1749,9 @@ function ProdutosView(props) {
       <Text style={styles.label}>Tipo do item</Text>
       <View style={styles.chipRow}>
         <OptionChip label="Item comum" active={(produtoForm.tipoItem || "comum") !== "pizza"} onPress={() => setProdutoForm({ ...produtoForm, tipoItem: "comum", tipo: "comum", maxSabores: 1, pizzaMultisabor: false, calculoPrecoPor: "maior" })} />
-        <OptionChip label="Pizza" active={produtoForm.tipoItem === "pizza"} onPress={() => setProdutoForm({ ...produtoForm, tipoItem: "pizza", tipo: "pizza", maxSabores: Math.max(2, Number(produtoForm.maxSabores || 2)), pizzaMultisabor: true })} />
+        <OptionChip label="Pizza" active={produtoForm.tipoItem === "pizza"} onPress={() => { const max = Math.max(1, Number(produtoForm.maxSabores || 1)); setProdutoForm({ ...produtoForm, tipoItem: "pizza", tipo: "pizza", maxSabores: max, pizzaMultisabor: max > 1, calculoPrecoPor: produtoForm.calculoPrecoPor || "maior" }); }} />
       </View>
-      {produtoForm.tipoItem === "pizza" ? <View style={styles.row}><View style={{ flex: 1 }}><Field label="Max. sabores" value={produtoForm.maxSabores} onChangeText={(v) => { const max = Math.max(1, Math.min(12, Number(v || 1))); setProdutoForm({ ...produtoForm, maxSabores: max, pizzaMultisabor: max > 1 }); }} keyboardType="number-pad" /></View><View style={{ width: 10 }} /><View style={{ flex: 1 }}><Text style={styles.label}>Calculo</Text><View style={styles.chipRow}><OptionChip label="Maior" active={(produtoForm.calculoPrecoPor || "maior") !== "media"} onPress={() => setProdutoForm({ ...produtoForm, calculoPrecoPor: "maior" })} /><OptionChip label="Media" active={produtoForm.calculoPrecoPor === "media"} onPress={() => setProdutoForm({ ...produtoForm, calculoPrecoPor: "media" })} /></View></View></View> : null}
+      {produtoForm.tipoItem === "pizza" ? <View style={styles.row}><View style={{ flex: 1 }}><Field label="Sabores do item" value={produtoForm.maxSabores} onChangeText={(v) => { const max = Math.max(1, Math.min(12, Number(v || 1))); setProdutoForm({ ...produtoForm, maxSabores: max, pizzaMultisabor: max > 1, calculoPrecoPor: max > 1 ? produtoForm.calculoPrecoPor || "maior" : "maior" }); }} keyboardType="number-pad" /></View>{Number(produtoForm.maxSabores || 1) > 1 ? <><View style={{ width: 10 }} /><View style={{ flex: 1 }}><Text style={styles.label}>Cálculo do preço</Text><View style={styles.chipRow}><OptionChip label="Maior" active={(produtoForm.calculoPrecoPor || "maior") !== "media"} onPress={() => setProdutoForm({ ...produtoForm, calculoPrecoPor: "maior" })} /><OptionChip label="Média" active={produtoForm.calculoPrecoPor === "media"} onPress={() => setProdutoForm({ ...produtoForm, calculoPrecoPor: "media" })} /></View></View></> : null}</View> : null}
       <Field label="Nome do produto" value={produtoForm.nome} onChangeText={(v) => setProdutoForm({ ...produtoForm, nome: v })} />
       <Field label="Descrição" value={produtoForm.descricao} onChangeText={(v) => setProdutoForm({ ...produtoForm, descricao: v })} multiline />
       <View style={styles.row}><View style={{ flex: 1 }}><Field label="Preço base" value={produtoForm.precoBase} onChangeText={(v) => setProdutoForm({ ...produtoForm, precoBase: v })} keyboardType="decimal-pad" /></View><View style={{ width: 10 }} /><View style={{ flex: 1 }}><Field label="Imagem URL" value={produtoForm.imagem} onChangeText={(v) => setProdutoForm({ ...produtoForm, imagem: v })} /></View></View>
@@ -1787,7 +1793,7 @@ function GrupoExtraProduto({ tipo, items, temp, setTemp, onAdd, onRemove }) {
 }
 
 function CategoryItem({ cat, onEdit, onDelete }) {
-  const tipo = cat.tipoCategoria || (cat.pizzaMultisabor ? "pizza 2 sabores" : cat.permiteSabores ? "pizza" : "simples");
+  const tipo = cat.tipoCategoria === TIPO_CATEGORIA.SIMPLES ? "simples" : (cat.permiteSabores || cat.pizzaMultisabor || cat.tipoCategoria === "pizza" ? "pizza" : "simples");
   return <View style={styles.entityCard}><View style={styles.entityIcon}><Ionicons name={tipo.includes("pizza") ? "pizza-outline" : "albums-outline"} size={20} color="#ff3b8a" /></View><View style={{ flex: 1 }}><Text style={styles.categoryName}>{cat.nome}</Text><Text style={styles.categoryMeta}>{cat.ativa === false ? "Inativa" : "Ativa"} • {tipo} • {(cat.tiposExtras || []).length} grupos extras</Text></View><View style={styles.entityActions}><MiniButton title="Editar" icon="create-outline" onPress={() => onEdit(cat)} /><MiniButton title="Excluir" danger icon="trash-outline" onPress={() => onDelete(cat)} /></View></View>;
 }
 
