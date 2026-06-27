@@ -945,8 +945,27 @@ export default function HubRestauranteScreen({ onLogout }) {
       cancelado: "Cancelando pedido e processando estorno...",
     };
     await runAction(labels[statusFinal] || "Atualizando pedido...", async () => {
-      await api.put(`/api/pedidos/status/${pedidoId}`, { status: statusFinal, restauranteId });
+      const response = statusFinal === "cancelado"
+        ? await api.post(`/api/pedidos/${pedidoId}/cancelar`, {
+            restauranteId,
+            motivo: "Cancelado pelo painel Movyo Hub.",
+            tipoCancelamento: "recusa_restaurante",
+          })
+        : await api.put(`/api/pedidos/status/${pedidoId}`, { status: statusFinal, restauranteId });
       await load({ silent: true });
+      if (statusFinal === "cancelado") {
+        const estorno = response?.data?.estorno || {};
+        if (estorno.status === "erro") {
+          Alert.alert(
+            "Pedido cancelado",
+            `O pedido foi cancelado, mas o estorno automatico precisa de atencao: ${estorno.erro || "verifique no Mercado Pago."}`
+          );
+        } else if (estorno.status === "concluido") {
+          Alert.alert("Pedido cancelado", `Estorno concluido no valor de ${moeda(estorno.valor || 0)}.`);
+        } else {
+          Alert.alert("Pedido cancelado", "Cancelamento concluido. Nao havia estorno online aplicavel.");
+        }
+      }
     }).catch((e) => Alert.alert("Erro", e?.response?.data?.message || e?.response?.data?.mensagem || e?.response?.data?.erro || e.message));
   };
 
@@ -1467,7 +1486,10 @@ function OrdersHubView({ title, subtitle, pedidos = [], onStatusChange, aReceber
         }
         if (["em_producao", "em produção"].includes(status)) nextActions.push(["Pronto", "pronto", "checkmark-done-outline"]);
         if (["pronto", "em_entrega"].includes(status)) nextActions.push(["Entregue", "entregue", "flag-outline"]);
-        if (!["cancelado", "cancelada", "canceled", "cancelled"].includes(status) && !nextActions.some(([, nextStatus]) => nextStatus === "cancelado")) nextActions.push(["Cancelar", "cancelado", "ban-outline"]);
+        if (
+          !["cancelado", "cancelada", "canceled", "cancelled", "entregue", "finalizado", "finalizada", "concluido", "concluida"].includes(status) &&
+          !nextActions.some(([, nextStatus]) => nextStatus === "cancelado")
+        ) nextActions.push(["Cancelar", "cancelado", "ban-outline"]);
         return (
           <View key={getId(pedido) || getPedidoCodigoHub(pedido)} style={styles.orderCard}>
             <View style={styles.orderTop}>

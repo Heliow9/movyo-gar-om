@@ -122,6 +122,10 @@ const pickNumero = (p) => p?.numeroPedido || p?.numero_pedido || p?.pedidoNumero
 const pickTotal = (p) => p?.total ?? p?.valorTotal ?? p?.valor ?? p?.subtotal ?? 0;
 const pickPagamento = (p) => safeText(p?.formaPagamento || p?.formadePagamento || p?.metodoPagamento || p?.pagamento?.metodo || p?.pagamento || p?.pagamentos?.[0]?.metodo || "Não informado");
 const pickItens = (p) => (Array.isArray(p?.itens) ? p.itens : Array.isArray(p?.items) ? p.items : []);
+const hasConfirmedPayment = (p) =>
+  Number(p?.valorPago || 0) > 0 ||
+  normalizeStatus(p?.statusPagamento || p?.pagamento?.status) === "pago" ||
+  (Array.isArray(p?.pagamentos) && p.pagamentos.some((pg) => normalizeStatus(pg?.status) === "confirmado"));
 
 function fmtDate(v) {
   if (!v) return "Agora";
@@ -152,8 +156,23 @@ export default function PedidosScreen({ navigation, route }) {
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const [isOnline, setIsOnline] = useState(true);
   const [fromCache, setFromCache] = useState(false);
+  const [canCancelOrders, setCanCancelOrders] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
   const modoAReceber = route?.params?.modo === "a_receber";
+
+  useEffect(() => {
+    let active = true;
+    getSession().then((session) => {
+      if (!active) return;
+      const allowed = session?.tipo === "restaurante" ||
+        session?.garcom?.permissoes?.cancelarPedido === true ||
+        session?.garcom?.permissoes?.cancelarPedido === "true";
+      setCanCancelOrders(allowed);
+    }).catch(() => {
+      if (active) setCanCancelOrders(false);
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -316,8 +335,22 @@ export default function PedidosScreen({ navigation, route }) {
         onPress: async () => {
           try {
             setBusyId(id);
-            await api.post(`/api/garcons/app/pedido/${id}/cancelar`, {});
+            const response = await api.post(`/api/garcons/app/pedido/${id}/cancelar`, {
+              motivo: "Cancelado pelo app Movyo Hub.",
+              tipoCancelamento: "manual",
+            });
             await fetchPedidos();
+            const estorno = response?.data?.estorno || {};
+            if (estorno.status === "erro") {
+              Alert.alert(
+                "Pedido cancelado",
+                `O pedido foi cancelado, mas o estorno automatico precisa de atencao: ${estorno.erro || "verifique no Mercado Pago."}`
+              );
+            } else if (estorno.status === "concluido") {
+              Alert.alert("Pedido cancelado", `Estorno concluido no valor de ${money(estorno.valor || 0)}.`);
+            } else {
+              Alert.alert("Pedido cancelado", "Cancelamento concluido.");
+            }
           } catch (err) {
             const msg = err?.response?.data?.message || err?.response?.data?.mensagem || "Não foi possível cancelar.";
             Alert.alert("Ops", msg);
@@ -358,7 +391,9 @@ export default function PedidosScreen({ navigation, route }) {
     const id = pickPedidoId(pedido);
     const itens = pickItens(pedido);
     const st = normalizeStatus(pedido?.status);
-    const canCancel = !["cancelado", "entregue", "finalizado"].includes(st);
+    const canCancel = canCancelOrders &&
+      !["cancelado", "cancelada", "canceled", "cancelled", "entregue", "finalizado", "finalizada", "concluido", "concluida"].includes(st);
+    const canCancelItem = canCancel && !hasConfirmedPayment(pedido);
 
     return (
       <View key={id || `${pickNumero(pedido)}_${pickCriadoEm(pedido)}`} style={styles.card}>
@@ -388,7 +423,7 @@ export default function PedidosScreen({ navigation, route }) {
                   <Text style={[styles.itemName, itemCanceled && styles.itemCanceled]} numberOfLines={1}>{itemQty(it)}x {itemName(it)}</Text>
                   {!!safeText(it?.observacao || it?.obs) && <Text style={styles.itemObs} numberOfLines={1}>{safeText(it?.observacao || it?.obs)}</Text>}
                 </View>
-                {canCancel && !itemCanceled && (
+                {canCancelItem && !itemCanceled && (
                   <Pressable onPress={() => cancelarItem(pedido, idx, it)} style={styles.itemCancelBtn} disabled={busyId === `${id}_${idx}`}>
                     {busyId === `${id}_${idx}` ? <ActivityIndicator size="small" /> : <Ionicons name="close" size={16} color="#ef4444" />}
                   </Pressable>
