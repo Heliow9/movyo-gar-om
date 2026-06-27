@@ -21,6 +21,7 @@ import Logo from "../../assets/logo.png";
 import AppVersionInfo from "../components/AppVersionInfo";
 import { api } from "../api/api";
 import { saveSession } from "../api/storage/session";
+import { subscribeNativePush } from "../utils/pwaNotifications";
 import { getAuthBlockInfoFromError, getRestauranteAccessBlockInfo, pickRestauranteFromPayload } from "../utils/licenseGuard";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -121,6 +122,29 @@ export default function LoginScreen({ onLogged, onBlocked }) {
       }
 
       await saveSession({ token, restaurante, garcom, tipo: tipoLogin });
+
+      // ✅ Android nativo: registra o ExpoPushToken logo após o login.
+      // O sincronizador global continua existindo, mas essa chamada evita ficar sem cadastro
+      // quando o app já entra direto autenticado ou quando a navegação demora a montar.
+      if (Platform.OS !== "web") {
+        const restauranteId =
+          restaurante?._id ||
+          restaurante?.id ||
+          restaurante?.restauranteId ||
+          restaurante?.codigo ||
+          restaurante?.codigoRestaurante ||
+          "";
+
+        subscribeNativePush({ token, restauranteId, requestPermission: true })
+          .then((pushResult) => {
+            if (!pushResult?.ok) {
+              console.warn("[Movyo Push Android] Registro pós-login falhou:", pushResult);
+            }
+          })
+          .catch((pushError) => {
+            console.warn("[Movyo Push Android] Erro no registro pós-login:", pushError?.message || pushError);
+          });
+      }
 
       // ✅ lembrar login (apenas identificador)
       if (remember) await AsyncStorage.setItem(REMEMBER_KEY, JSON.stringify({ login: id, tipoLogin }));

@@ -8,6 +8,11 @@ const WEB_PUSH_SYNC_KEY = "movyo:webpush:lastSync";
 const WEB_PUSH_ENDPOINT_KEY = "movyo:webpush:endpoint";
 const WEB_PUSH_SYNC_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
+export async function subscribeNativePush({ requestPermission = true } = {}) {
+  const nativeNotifications = await import("./nativeNotifications");
+  return nativeNotifications.syncNativePushSubscription({ requestPermission });
+}
+
 export function getStoredWebPushState() {
   if (!isBrowser) return { connected: false, lastSync: null, endpoint: "" };
   try {
@@ -358,14 +363,29 @@ export async function alertCaixaAberto(payload = {}) {
 export async function alertCaixaFechado(payload = {}) {
   const operador = payload?.operador?.nome || payload?.operadorNome || payload?.nomeOperador || payload?.usuario?.nome || "Operador";
   const hora = getHoraCaixa(payload, "fechadoEm");
+  const valorFinal = Number(payload?.saldoFinalInformado ?? payload?.totalEsperadoDinheiro ?? payload?.totalVendas ?? 0);
+  const totalVendas = Number(payload?.totalVendas ?? 0);
+  const money = (value) => Number(value || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const complementoVendas = Math.abs(totalVendas - valorFinal) >= 0.01
+    ? ` Vendas: R$ ${money(totalVendas)}.`
+    : "";
 
   vibrate([160, 70, 160]);
   playNotificationSound();
 
   await showLocalNotification("Caixa fechado na Movyo", {
-    body: `${operador} fechou o caixa as ${hora}.`,
+    body: `${operador} fechou o caixa às ${hora}. Valor final: R$ ${money(valorFinal)}.${complementoVendas}`,
     tag: `caixa-fechado-${payload?._id || payload?.id || Date.now()}`,
     renotify: true,
-    data: { url: "/", screen: "Home", caixaId: payload?._id || payload?.id },
+    data: {
+      url: "/",
+      screen: "Home",
+      caixaId: payload?._id || payload?.id,
+      saldoFinalInformado: valorFinal,
+      totalVendas,
+    },
   });
 }

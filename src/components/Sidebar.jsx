@@ -26,6 +26,19 @@ import {
 } from "react-icons/fa";
 
 import PedidosEmAndamento from "./PedidosEmAndamento";
+import { hasPlanFeature } from "../utils/planRules";
+
+function getRestaurantePlano() {
+  try {
+    const raw =
+      JSON.parse(localStorage.getItem("restauranteSelecionado") || "null") ||
+      JSON.parse(localStorage.getItem("restaurante") || "null") ||
+      {};
+    return raw?.restaurante && typeof raw.restaurante === "object" ? raw.restaurante : raw;
+  } catch {
+    return {};
+  }
+}
 
 const Sidebar = () => {
   const theme = useTheme();
@@ -34,17 +47,27 @@ const Sidebar = () => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mostrarPedidos, setMostrarPedidos] = useState(false);
+  const [restaurantePlano, setRestaurantePlano] = useState(() => getRestaurantePlano());
 
   const drawerWidth = 270;
   const gradient = "linear-gradient(135deg, #ff3b8a 0%, #ff9b2d 100%)";
 
+  useEffect(() => {
+    const syncPlan = () => setRestaurantePlano(getRestaurantePlano());
+    window.addEventListener?.("storage", syncPlan);
+    return () => window.removeEventListener?.("storage", syncPlan);
+  }, []);
+
+  const knownPlan = Boolean(restaurantePlano?.plano || restaurantePlano?.planoInfo?.codigo);
+  const can = (feature) => !knownPlan || hasPlanFeature(restaurantePlano, feature);
+
   const menuItems = [
     { label: "Dashboard", icon: <FaHome />, path: "/" },
     { label: "Pedidos", icon: <FaClipboardList />, path: "/pedidos" },
-    { label: "Motoristas", icon: <FaMotorcycle />, path: "/motoristas" },
+    { label: "Motoristas", icon: <FaMotorcycle />, path: "/motoristas", feature: "driversApp" },
     { label: "Produtos", icon: <FaListUl />, path: "/produtos" },
     { label: "Configurações", icon: <FaCog />, path: "/configuracoes" },
-  ];
+  ].filter((item) => !item.feature || can(item.feature));
 
   // mesmo comportamento antigo: quando estiver na dashboard, depois de 10s abre pedidos
   useEffect(() => {

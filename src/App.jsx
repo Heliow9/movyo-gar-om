@@ -31,6 +31,7 @@ import FullscreenIcon from "@mui/icons-material/Fullscreen";
 
 import { useUI } from "../src/Context/UIContext";
 import { isTokenExpired } from "./utils/auth";
+import { hasPlanFeature } from "./utils/planRules";
 
 // 🔐 Rota protegida usando <Outlet />
 const ProtectedRoute = () => {
@@ -218,6 +219,36 @@ const RedirectParaUltimaVitrine = () => {
   return <Navigate to={slug ? `/p/${slug}` : "/p"} replace />;
 };
 
+const getRestaurantePlano = () => {
+  try {
+    const raw =
+      JSON.parse(localStorage.getItem("restauranteSelecionado") || "null") ||
+      JSON.parse(localStorage.getItem("restaurante") || "null") ||
+      {};
+    return raw?.restaurante && typeof raw.restaurante === "object" ? raw.restaurante : raw;
+  } catch {
+    return {};
+  }
+};
+
+const FeatureGate = ({ feature, children }) => {
+  const restaurante = getRestaurantePlano();
+  const knownPlan = Boolean(restaurante?.plano || restaurante?.planoInfo?.codigo);
+  if (knownPlan && !hasPlanFeature(restaurante, feature)) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography sx={{ fontWeight: 900, fontSize: 22, color: "#0f172a" }}>
+          Recurso fora do plano
+        </Typography>
+        <Typography sx={{ mt: 1, color: "#64748b" }}>
+          Este recurso esta disponivel em um plano superior. Ajuste o plano no Movyo SaaS Dashboard.
+        </Typography>
+      </Box>
+    );
+  }
+  return children;
+};
+
 const App = () => {
   const token = localStorage.getItem("token");
 
@@ -244,7 +275,7 @@ const App = () => {
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="pedidos" element={<Pedidos />} />
-          <Route path="motoristas" element={<Motoristas />} />
+          <Route path="motoristas" element={<FeatureGate feature="driversApp"><Motoristas /></FeatureGate>} />
           <Route path="produtos" element={<Produtos />} />
           <Route path="configuracoes" element={<Configuracoes />} />
         </Route>

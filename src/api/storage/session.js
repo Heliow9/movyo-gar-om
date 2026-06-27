@@ -36,6 +36,7 @@ export async function saveSession({ token, restaurante, garcom, tipo = "garcom" 
           nome: r.nome || r.name || null,
           slugIdentificador: r.slugIdentificador || r.slug || r.identificador || null,
           plano: r.plano || r.plan || null,
+          planoInfo: r.planoInfo || null,
           ativo: r.ativo !== false,
           bloqueado: r.bloqueado === true || r.suspenso === true,
           status: r.status || null,

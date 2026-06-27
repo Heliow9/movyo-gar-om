@@ -11,6 +11,10 @@ import {
   syncWebPushSubscription,
 } from "../utils/pwaNotifications";
 import { getSession } from "../api/storage/session";
+import {
+  getNativeNotificationStatus,
+  syncNativePushSubscription,
+} from "../utils/nativeNotifications";
 
 const pickToken = (session = {}) =>
   session?.token || session?.accessToken || session?.authToken || session?.usuario?.token || "";
@@ -20,7 +24,7 @@ const pickRestauranteId = (session = {}) =>
 
 export default function NotificationPermissionBanner() {
   const [permission, setPermission] = useState(() =>
-    Platform.OS === "web" ? getNotificationPermission() : "unsupported"
+    Platform.OS === "web" ? getNotificationPermission() : "checking"
   );
   const [remoteState, setRemoteState] = useState(() =>
     Platform.OS === "web" && getStoredWebPushState().connected ? "connected" : "idle"
@@ -30,6 +34,9 @@ export default function NotificationPermissionBanner() {
   const [hidden, setHidden] = useState(false);
 
   const runSubscription = useCallback(async ({ requestPermission }) => {
+    if (Platform.OS !== "web") {
+      return syncNativePushSubscription({ requestPermission });
+    }
     const session = await getSession();
     const args = {
       token: pickToken(session),
@@ -39,7 +46,23 @@ export default function NotificationPermissionBanner() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== "web") return undefined;
+    if (Platform.OS !== "web") {
+      let active = true;
+      getNativeNotificationStatus().then(async (status) => {
+        if (!active) return;
+        setPermission(status?.permission || "undetermined");
+        if (status?.ok) {
+          const result = await syncNativePushSubscription({ requestPermission: false });
+          if (!active) return;
+          setRemoteState(result?.ok ? "connected" : "error");
+          setRemoteMessage(result?.ok ? "" : result?.reason || "");
+        } else if (status?.reason) {
+          setRemoteState("error");
+          setRemoteMessage(status.reason);
+        }
+      });
+      return () => { active = false; };
+    }
     const update = () => setPermission(getNotificationPermission());
     update();
     window.addEventListener?.("focus", update);
@@ -87,7 +110,10 @@ export default function NotificationPermissionBanner() {
     setRemoteState("checking");
     try {
       const result = await runSubscription({ requestPermission: permission !== "granted" });
-      setPermission(result?.permission || getNotificationPermission());
+      setPermission(
+        result?.permission
+        || (Platform.OS === "web" ? getNotificationPermission() : permission)
+      );
 
       if (!result?.ok) {
         setRemoteState("error");
@@ -98,20 +124,31 @@ export default function NotificationPermissionBanner() {
 
       setRemoteState("connected");
       setRemoteMessage("");
-      Alert.alert("Notificações ativadas", "A Movyo poderá avisar sobre pedidos mesmo com o PWA fechado.");
+      Alert.alert(
+        "Notificações ativadas",
+        Platform.OS === "web"
+          ? "A Movyo poderá avisar sobre pedidos mesmo com o PWA fechado."
+          : "A Movyo poderá avisar sobre pedidos e caixa mesmo com o app fechado."
+      );
     } finally {
       setBusy(false);
     }
   }, [busy, permission, runSubscription]);
 
-  const needsInstall = isIOS() && !isStandalonePWA();
-  if (Platform.OS !== "web" || hidden || (!needsInstall && !supportsWebPush())) return null;
+  const isWeb = Platform.OS === "web";
+  const needsInstall = isWeb && isIOS() && !isStandalonePWA();
+  if (hidden || (isWeb && !needsInstall && !supportsWebPush())) return null;
 
   const denied = permission === "denied";
-  const connected = permission === "granted" && (remoteState === "connected" || getStoredWebPushState().connected);
+  const connected = permission === "granted" && (
+    remoteState === "connected"
+    || (isWeb && getStoredWebPushState().connected)
+  );
   if (connected) return null;
 
-  const title = needsInstall
+  const title = !isWeb && remoteState === "error"
+    ? "Push Android precisa de configuração"
+    : needsInstall
     ? "Instale para receber avisos"
     : denied
       ? "Notificações bloqueadas"
@@ -119,7 +156,13 @@ export default function NotificationPermissionBanner() {
         ? "Conecte o push em segundo plano"
         : "Ative as notificações";
 
-  const text = needsInstall
+  const text = !isWeb
+    ? remoteMessage || (
+      denied
+        ? "Libere as notificações da Movyo Hub nos ajustes do Android."
+        : "Ative os alertas nativos para receber pedidos e eventos do caixa com o app fechado."
+    )
+    : needsInstall
     ? "No iPhone, toque em Compartilhar → Adicionar à Tela de Início. Depois abra a Movyo pelo ícone instalado."
     : denied
       ? "Libere as notificações da Movyo Hub em Ajustes → Notificações e abra novamente pelo ícone da Tela de Início."

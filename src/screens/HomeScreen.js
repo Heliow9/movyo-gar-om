@@ -179,10 +179,8 @@ export default function HomeScreen({ navigation, onLogout }) {
     const emProducao = tipo === "em_producao" || isPedidoEmProducao(pedido);
     const mensagem = `${numero ? `Pedido #${numero}` : "Pedido"} de ${cliente}${total ? ` • ${moneyBRL(total)}` : ""}`;
 
-    if (Platform.OS === "web") {
-      try { await alertNovoPedido({ ...pedido, codigo: numero, cliente, total }, { emProducao }); } catch (_) {}
-      return;
-    }
+    const notified = await alertNovoPedido({ ...pedido, codigo: numero, cliente, total }, { emProducao }).catch(() => false);
+    if (notified) return;
 
     try { Vibration.vibrate([220, 90, 220]); } catch (_) {}
     Alert.alert(emProducao ? "🍳 Pedido em produção" : "📥 Novo pedido", mensagem);
@@ -349,14 +347,14 @@ export default function HomeScreen({ navigation, onLogout }) {
         if (isPedidoEmProducao(pedido)) notifyPedidoRecebido(pedido, "em_producao");
         schedule();
       };
-      handleCaixaAberto = (payload = {}) => {
-        if (Platform.OS === "web") alertCaixaAberto(payload?.caixa || payload).catch(() => {});
-        else Alert.alert("Caixa aberto", "O caixa do restaurante foi aberto.");
+      handleCaixaAberto = async (payload = {}) => {
+        const notified = await alertCaixaAberto(payload?.caixa || payload).catch(() => false);
+        if (!notified) Alert.alert("Caixa aberto", "O caixa do restaurante foi aberto.");
         schedule();
       };
-      handleCaixaFechado = (payload = {}) => {
-        if (Platform.OS === "web") alertCaixaFechado(payload?.caixa || payload).catch(() => {});
-        else Alert.alert("Caixa fechado", "O caixa do restaurante foi fechado.");
+      handleCaixaFechado = async (payload = {}) => {
+        const notified = await alertCaixaFechado(payload?.caixa || payload).catch(() => false);
+        if (!notified) Alert.alert("Caixa fechado", "O caixa do restaurante foi fechado.");
         schedule();
       };
       eventosAtualizacao.forEach((ev) => socket.on(ev, schedule));

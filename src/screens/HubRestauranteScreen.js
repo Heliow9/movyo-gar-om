@@ -28,8 +28,9 @@ import { clearSession, getSession, updateSessionRestaurantePatch } from "../api/
 import { getAuthBlockInfoFromError, getRestauranteAccessBlockInfo } from "../utils/licenseGuard";
 import { connectSocket, getSocket, onSocketState } from "../socket/socket";
 import { alertCaixaAberto, alertCaixaFechado, alertNovoPedido } from "../utils/pwaNotifications";
+import { hasPlanFeature } from "../utils/planRules";
 
-const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza", PIZZA_DUAS: "pizza_duas" };
+const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza" };
 const MOCK_IMAGE = "https://cdn.pixabay.com/photo/2017/12/09/08/18/pizza-3007395_960_720.jpg";
 const moeda = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const onlyNumber = (v) => String(v || "").replace(/[^0-9.,-]/g, "").replace(",", ".");
@@ -356,9 +357,12 @@ export default function HubRestauranteScreen({ onLogout }) {
   const [socketStatus, setSocketStatus] = useState({ connected: false, connecting: false });
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const planoSlug = String(rest?.plano || rest?.planoNome || rest?.assinatura?.plano || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const starterMobile = planoSlug.includes("starter") && planoSlug.includes("mobile");
-  const garcomLimitReached = starterMobile && !garcomEditandoId && garcons.length >= 2;
+  const planoSlug = String(rest?.planoInfo?.codigo || rest?.plano || rest?.planoNome || rest?.assinatura?.plano || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const starterMobile = (planoSlug.includes("starter") || planoSlug.includes("start")) && planoSlug.includes("mobile");
+  const canSalesReports = !!rest && hasPlanFeature(rest, "salesReports");
+  const canWhatsappBot = !!rest && hasPlanFeature(rest, "whatsappBot");
+  const canOnlinePayments = !!rest && hasPlanFeature(rest, "onlinePayments");
+  const garcomLimitReached = starterMobile && !garcomEditandoId && garcons.length >= 1;
   const operadoresAtivos = useMemo(() => operadoresCaixa.filter((o) => o?.ativo !== false), [operadoresCaixa]);
   const operadorAbertura = useMemo(() => operadoresCaixa.find((o) => String(getId(o)) === String(caixaForm.operadorId)), [operadoresCaixa, caixaForm.operadorId]);
   const operadorFechamento = useMemo(() => operadoresCaixa.find((o) => String(getId(o)) === String(caixa?.operadorId || caixa?.operadorCaixaId)), [operadoresCaixa, caixa]);
@@ -367,10 +371,31 @@ export default function HubRestauranteScreen({ onLogout }) {
 
   const categoriaSelecionada = useMemo(() => categorias.find((c) => getId(c) === produtoForm.categoria), [categorias, produtoForm.categoria]);
   const pedidosAReceber = useMemo(() => pedidos.filter(isPedidoAReceberHub), [pedidos]);
+  const financialReport = useMemo(() => {
+    if (String(caixa?.status || "").toLowerCase() !== "aberto") {
+      return { ...todayReport, scope: "hoje" };
+    }
+    return {
+      scope: "turno",
+      resumo: {
+        totalVendas: Number(caixa?.totalVendas || 0),
+        dinheiro: Number(caixa?.totalDinheiro || 0),
+        pix: Number(caixa?.totalPix || 0),
+        credito: Number(caixa?.totalCredito || 0),
+        debito: Number(caixa?.totalDebito || 0),
+        online: Number(caixa?.totalOnline || 0),
+        outros: Number(caixa?.totalOutros || 0),
+        sangrias: Number(caixa?.totalSangrias || 0),
+        suprimentos: Number(caixa?.totalSuprimentos || 0),
+        pedidos: Number(caixa?.totalPedidos || 0),
+        caixas: 1,
+      },
+    };
+  }, [caixa, todayReport]);
 
   const resumo = useMemo(() => {
-    const totalHoje = Number(todayReport?.resumo?.totalVendas || 0);
-    const pedidosConfirmadosHoje = Number(todayReport?.resumo?.pedidos || 0);
+    const totalHoje = Number(financialReport?.resumo?.totalVendas || 0);
+    const pedidosConfirmadosHoje = Number(financialReport?.resumo?.pedidos || 0);
     const pendentes = Number(dashboardResumo?.pedidosPendentes ?? dashboardResumo?.pedidosFila ?? 0);
     const mesasOcupadas = Number(dashboardResumo?.mesasAbertas ?? dashboardResumo?.mesasOcupadas ?? mesas.filter((m) => String(m.status || "").toLowerCase() !== "livre").length);
     return {
@@ -381,16 +406,16 @@ export default function HubRestauranteScreen({ onLogout }) {
       aReceber: pedidosAReceber.length,
       mesasOcupadas,
     };
-  }, [todayReport, dashboardResumo, pedidosAReceber.length, mesas]);
+  }, [financialReport, dashboardResumo, pedidosAReceber.length, mesas]);
 
   const operationStatus = useMemo(() => ({
     online: networkOnline,
     socket: !!socketStatus.connected,
     caixa: caixa?.status === "aberto",
     loja: rest?.aberto !== false,
-    mercadoPago: !!(rest?.mercadoPago?.conectado || rest?.mercadoPagoConectado || rest?.recipient_id),
-    whatsapp: !!botStatus?.conectado,
-  }), [networkOnline, socketStatus.connected, caixa, rest, botStatus]);
+    mercadoPago: canOnlinePayments && !!(rest?.mercadoPago?.conectado || rest?.mercadoPagoConectado || rest?.recipient_id),
+    whatsapp: canWhatsappBot && !!botStatus?.conectado,
+  }), [networkOnline, socketStatus.connected, caixa, rest, botStatus, canOnlinePayments, canWhatsappBot]);
 
   const licenseInfo = useMemo(() => getLicenseInfo(rest), [rest]);
 
@@ -434,6 +459,9 @@ export default function HubRestauranteScreen({ onLogout }) {
       await updateSessionRestaurantePatch(r);
       const id = getId(r) || getId(s?.restaurante);
       const today = toLocalISODate();
+      const loadedCanWhatsappBot = hasPlanFeature(r, "whatsappBot");
+      const loadedCanSalesReports = hasPlanFeature(r, "salesReports");
+      const loadedCanOnlinePayments = hasPlanFeature(r, "onlinePayments");
 
       const safeRequest = async (promise, fallback) => {
         try {
@@ -453,10 +481,10 @@ export default function HubRestauranteScreen({ onLogout }) {
         safeRequest(api.get(`/api/garcons/app/pedidos?_t=${Date.now()}`), { data: [] }),
         safeRequest(api.get(`/api/caixa/${id}/atual`), { data: null }),
         safeRequest(api.get(`/api/caixa/${id}/operadores`), { data: [] }),
-        safeRequest(api.get(`/api/mercadopago/status/${id}`), { data: null }),
-        safeRequest(api.get(`/api/bot/status/${id}`), { data: null }),
+        safeRequest(loadedCanOnlinePayments ? api.get(`/api/mercadopago/status/${id}`) : Promise.resolve({ data: null }), { data: null }),
+        safeRequest(loadedCanWhatsappBot ? api.get(`/api/bot/status/${id}`) : Promise.resolve({ data: null }), { data: null }),
         safeRequest(api.get(`/api/garcons/app/resumo?fresh=1&_t=${Date.now()}`), { data: {} }),
-        safeRequest(api.get(`/api/caixa/${id}/relatorios?tipo=data&inicio=${today}&fim=${today}`), { data: null }),
+        safeRequest(loadedCanSalesReports ? api.get(`/api/caixa/${id}/relatorios?tipo=data&inicio=${today}&fim=${today}`) : Promise.resolve({ data: null }), { data: null }),
       ];
       const [c, p, m, g, pe, cx, op, mp, bot, summary, reportToday] = await Promise.all(reqs);
       setCategorias(Array.isArray(c.data) ? c.data : c.data?.categorias || c.data?.items || []);
@@ -467,9 +495,10 @@ export default function HubRestauranteScreen({ onLogout }) {
       setCaixa(cx.data?.caixa || cx.data?.sessao || cx.data || null);
       setOperadoresCaixa((Array.isArray(op.data) ? op.data : op.data?.operadores || op.data?.items || []).map((item) => ({ ...item, permissoes: normalizeOperatorPerms(item?.permissoes) })));
       setDashboardResumo(summary.data || {});
-      setTodayReport(normalizeReport(reportToday.data));
+      setTodayReport(loadedCanSalesReports ? normalizeReport(reportToday.data) : normalizeReport(null));
       if (mp.data) setRest((prev) => ({ ...prev, mercadoPago: { ...(prev?.mercadoPago || {}), ...mp.data } }));
       if (bot.data) setBotStatus(normalizarBotStatus(bot.data));
+      if (!loadedCanWhatsappBot) setBotStatus({ ligado: false, conectado: false, estado: "bloqueado_por_plano", temQr: false, atualizadoEm: null, erroConexao: "" });
       setLastSyncAt(new Date());
     } catch (e) {
       const block = getAuthBlockInfoFromError(e);
@@ -487,6 +516,11 @@ export default function HubRestauranteScreen({ onLogout }) {
 
   const carregarRelatorio = useCallback(async (nextFilter = reportFilter) => {
     if (!restauranteId) return;
+    if (!canSalesReports) {
+      setReportError("Relatorios de vendas estao disponiveis a partir do plano Essencial.");
+      setReportData(normalizeReport(null));
+      return;
+    }
     const inicio = String(nextFilter?.inicio || "");
     const fim = String(nextFilter?.fim || "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(inicio) || !/^\d{4}-\d{2}-\d{2}$/.test(fim)) {
@@ -514,7 +548,7 @@ export default function HubRestauranteScreen({ onLogout }) {
     } finally {
       setReportLoading(false);
     }
-  }, [restauranteId, reportFilter]);
+  }, [restauranteId, reportFilter, canSalesReports]);
 
   useEffect(() => {
     const unsubscribeNet = NetInfo.addEventListener((state) => {
@@ -528,8 +562,8 @@ export default function HubRestauranteScreen({ onLogout }) {
   }, []);
 
   useEffect(() => {
-    if (tab === "relatorios" && restauranteId) carregarRelatorio();
-  }, [tab, restauranteId, carregarRelatorio]);
+    if (tab === "relatorios" && restauranteId && canSalesReports) carregarRelatorio();
+  }, [tab, restauranteId, canSalesReports, carregarRelatorio]);
 
   const refreshDashboardNow = useCallback(({ force = false, delay = 0 } = {}) => {
     if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
@@ -685,11 +719,11 @@ export default function HubRestauranteScreen({ onLogout }) {
   const setCategoriaTipo = (tipoCategoria) => setCategoriaForm((prev) => ({
     ...prev,
     tipoCategoria,
-    pizzaMultisabor: tipoCategoria === TIPO_CATEGORIA.PIZZA_DUAS,
+    pizzaMultisabor: false,
     permiteSabores: tipoCategoria !== TIPO_CATEGORIA.SIMPLES,
     permiteBordas: tipoCategoria === TIPO_CATEGORIA.SIMPLES ? false : prev.permiteBordas,
     permiteAdicionais: tipoCategoria === TIPO_CATEGORIA.SIMPLES ? false : prev.permiteAdicionais,
-    calculoPrecoPor: tipoCategoria === TIPO_CATEGORIA.PIZZA_DUAS ? prev.calculoPrecoPor || "maior" : "maior",
+    calculoPrecoPor: "maior",
   }));
 
   const normalizarTipoExtra = (t) => ({
@@ -719,7 +753,15 @@ export default function HubRestauranteScreen({ onLogout }) {
   const removerTipoExtraCategoria = (index) => setCategoriaForm((prev) => ({ ...prev, tiposExtras: (prev.tiposExtras || []).filter((_, i) => i !== index) }));
   const iniciarEdicaoCategoria = (cat) => {
     setCategoriaEditandoId(getId(cat));
-    setCategoriaForm({ ...emptyCategoria(), ...cat, ativa: cat.ativa !== false, tipoCategoria: cat.tipoCategoria || (cat.pizzaMultisabor ? TIPO_CATEGORIA.PIZZA_DUAS : cat.permiteSabores ? TIPO_CATEGORIA.PIZZA : TIPO_CATEGORIA.SIMPLES), tiposExtras: Array.isArray(cat.tiposExtras) ? cat.tiposExtras : [] });
+    setCategoriaForm({
+      ...emptyCategoria(),
+      ...cat,
+      ativa: cat.ativa !== false,
+      tipoCategoria: cat.tipoCategoria === TIPO_CATEGORIA.SIMPLES ? TIPO_CATEGORIA.SIMPLES : (cat.permiteSabores || cat.pizzaMultisabor || cat.tipoCategoria === "pizza" ? TIPO_CATEGORIA.PIZZA : TIPO_CATEGORIA.SIMPLES),
+      pizzaMultisabor: false,
+      calculoPrecoPor: "maior",
+      tiposExtras: Array.isArray(cat.tiposExtras) ? cat.tiposExtras : []
+    });
     setTab("categorias");
   };
   const limparCategoria = () => { setCategoriaForm(emptyCategoria()); setCategoriaEditandoId(null); setTipoExtraForm(emptyTipoExtra()); setTipoExtraItem(emptyItemPreco()); };
@@ -727,7 +769,7 @@ export default function HubRestauranteScreen({ onLogout }) {
   const salvarCategoria = async () => {
     if (!categoriaForm.nome.trim()) return Alert.alert("Ops", "Informe o nome da categoria.");
     await runAction(categoriaEditandoId ? "Salvando categoria..." : "Criando categoria...", async () => {
-      const payload = { ...categoriaForm, nome: categoriaForm.nome.trim(), restaurante: restauranteId, tiposExtras: (categoriaForm.tiposExtras || []).map(normalizarTipoExtra) };
+      const payload = { ...categoriaForm, nome: categoriaForm.nome.trim(), restaurante: restauranteId, pizzaMultisabor: false, calculoPrecoPor: "maior", tiposExtras: (categoriaForm.tiposExtras || []).map(normalizarTipoExtra) };
       if (categoriaEditandoId) await api.put(`/api/categorias/${categoriaEditandoId}`, payload); else await api.post("/api/categorias", payload);
       limparCategoria();
       await load({ silent: true });
@@ -814,7 +856,7 @@ export default function HubRestauranteScreen({ onLogout }) {
   const setPermGarcom = (key, value) => setGarcomForm((prev) => ({ ...prev, permissoes: { ...normalizePerms(prev.permissoes), [key]: !!value } }));
 
   const criarGarcom = async () => {
-    if (garcomLimitReached) return Alert.alert("Limite do plano", "O plano Starter Mobile permite no máximo 2 garçons.");
+    if (garcomLimitReached) return Alert.alert("Limite do plano", "O plano Start Mobile permite no maximo 1 garcom.");
     if (!String(garcomForm.nome || "").trim()) return Alert.alert("Ops", "Informe o nome do garçom.");
     if (!String(garcomForm.telefone || "").trim()) return Alert.alert("Ops", "Informe o telefone do garçom.");
     if (!garcomEditandoId && String(garcomForm.pin || "").trim().length < 4) return Alert.alert("Ops", "Informe um PIN com pelo menos 4 dígitos.");
@@ -910,24 +952,28 @@ export default function HubRestauranteScreen({ onLogout }) {
 
   const atualizarStatusMercadoPago = async () => {
     if (!restauranteId) return;
+    if (!canOnlinePayments) return Alert.alert("Plano Essencial", "PIX e cartao no cardapio estao disponiveis a partir do plano Essencial.");
     setMpLoading(true);
     try { const { data } = await api.get(`/api/mercadopago/status/${restauranteId}`); setRest((prev) => ({ ...prev, mercadoPago: { ...(prev?.mercadoPago || {}), ...data } })); Alert.alert("Mercado Pago", data?.conectado ? "Conta conectada." : "Ainda não conectado."); }
     catch (e) { Alert.alert("Mercado Pago", e?.response?.data?.message || e?.response?.data?.mensagem || e.message || "Erro ao atualizar status."); }
     finally { setMpLoading(false); }
   };
   const conectarMercadoPago = async () => {
+    if (!canOnlinePayments) return Alert.alert("Plano Essencial", "Conexao com Mercado Pago esta disponivel a partir do plano Essencial.");
     setMpLoading(true);
     try { const { data } = await api.get(`/api/mercadopago/oauth/start/${restauranteId}`); if (!data?.url) throw new Error("URL OAuth não retornada."); await Linking.openURL(data.url); Alert.alert("Mercado Pago", "Autorize a conta e depois toque em Atualizar status."); }
     catch (e) { Alert.alert("Mercado Pago", e?.response?.data?.message || e?.response?.data?.mensagem || e.message || "Erro ao conectar."); }
     finally { setMpLoading(false); }
   };
   const desconectarMercadoPago = async () => {
+    if (!canOnlinePayments) return Alert.alert("Plano Essencial", "Mercado Pago esta disponivel a partir do plano Essencial.");
     setMpLoading(true);
     try { await api.post("/api/mercadopago/disconnect", {}); setRest((prev) => ({ ...prev, mercadoPago: { conectado: false, userId: null, tokenExpiraEm: null, ultimoOAuthEm: null } })); Alert.alert("Mercado Pago", "Conta desconectada."); }
     catch (e) { Alert.alert("Mercado Pago", e?.response?.data?.message || e?.response?.data?.mensagem || e.message || "Erro ao desconectar."); }
     finally { setMpLoading(false); }
   };
   const toggleCartaoVitrine = async (value) => {
+    if (!canOnlinePayments) return Alert.alert("Plano Essencial", "Pagamento com cartao na vitrine esta disponivel a partir do plano Essencial.");
     const before = !!rest.pagamentoCartaoAtivo;
     setRest((prev) => ({ ...prev, pagamentoCartaoAtivo: value }));
     try { await api.patch("/api/restaurantes/pagamento-cartao", { pagamentoCartaoAtivo: value }); }
@@ -953,6 +999,10 @@ export default function HubRestauranteScreen({ onLogout }) {
 
   const carregarStatusBot = async ({ alertar = false } = {}) => {
     if (!restauranteId) return botStatus;
+    if (!canWhatsappBot) {
+      if (alertar) Alert.alert("Plano Profissional", "WhatsApp Bot esta disponivel a partir do plano Profissional.");
+      return botStatus;
+    }
     try {
       const { data } = await api.get(`/api/bot/status/${restauranteId}`);
       const next = normalizarBotStatus(data);
@@ -968,6 +1018,7 @@ export default function HubRestauranteScreen({ onLogout }) {
 
   const buscarQrBot = async () => {
     if (!restauranteId) return;
+    if (!canWhatsappBot) return Alert.alert("Plano Profissional", "WhatsApp Bot esta disponivel a partir do plano Profissional.");
     setBotLoading(true);
     try {
       const status = await carregarStatusBot();
@@ -992,6 +1043,7 @@ export default function HubRestauranteScreen({ onLogout }) {
 
   const conectarBot = async () => {
     if (!restauranteId) return;
+    if (!canWhatsappBot) return Alert.alert("Plano Profissional", "WhatsApp Bot esta disponivel a partir do plano Profissional.");
     setBotLoading(true);
     try {
       const status = await carregarStatusBot();
@@ -1011,7 +1063,9 @@ export default function HubRestauranteScreen({ onLogout }) {
     }
   };
 
-  const desconectarBot = () => Alert.alert("Desconectar WhatsApp", "Deseja desconectar a instância do WhatsApp deste restaurante?", [
+  const desconectarBot = () => {
+    if (!canWhatsappBot) return Alert.alert("Plano Profissional", "WhatsApp Bot esta disponivel a partir do plano Profissional.");
+    return Alert.alert("Desconectar WhatsApp", "Deseja desconectar a instância do WhatsApp deste restaurante?", [
     { text: "Cancelar", style: "cancel" },
     { text: "Desconectar", style: "destructive", onPress: async () => {
       setBotLoading(true);
@@ -1025,9 +1079,12 @@ export default function HubRestauranteScreen({ onLogout }) {
         Alert.alert("WhatsApp Bot", e?.response?.data?.message || e?.response?.data?.mensagem || e?.response?.data?.erro || e.message || "Erro ao desconectar.");
       } finally { setBotLoading(false); }
     }}
-  ]);
+    ]);
+  };
 
-  const resetarBot = () => Alert.alert("Resetar sessão", "Use isso apenas se o QR travar ou precisar trocar o WhatsApp conectado. Deseja resetar?", [
+  const resetarBot = () => {
+    if (!canWhatsappBot) return Alert.alert("Plano Profissional", "WhatsApp Bot esta disponivel a partir do plano Profissional.");
+    return Alert.alert("Resetar sessão", "Use isso apenas se o QR travar ou precisar trocar o WhatsApp conectado. Deseja resetar?", [
     { text: "Cancelar", style: "cancel" },
     { text: "Resetar", style: "destructive", onPress: async () => {
       setBotLoading(true);
@@ -1041,16 +1098,17 @@ export default function HubRestauranteScreen({ onLogout }) {
         Alert.alert("WhatsApp Bot", e?.response?.data?.message || e?.response?.data?.mensagem || e?.response?.data?.erro || e.message || "Erro ao resetar sessão.");
       } finally { setBotLoading(false); }
     }}
-  ]);
+    ]);
+  };
 
   useEffect(() => {
-    if (!restauranteId) return;
+    if (!restauranteId || !canWhatsappBot) return undefined;
     carregarStatusBot();
     const id = setInterval(() => carregarStatusBot(), botPolling ? 3500 : 12000);
     return () => clearInterval(id);
-  }, [restauranteId, botPolling]);
+  }, [restauranteId, botPolling, canWhatsappBot]);
 
-  const botQrImageUrl = botQr ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data=${encodeURIComponent(botQr)}` : "";
+  const botQrImageUrl = canWhatsappBot && botQr ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data=${encodeURIComponent(botQr)}` : "";
 
   const logoutNow = async () => {
     try {
@@ -1082,21 +1140,31 @@ export default function HubRestauranteScreen({ onLogout }) {
     { key: "a_receber", label: "A Receber", icon: "notifications-outline", badge: resumo.aReceber },
     { key: "pedidos", label: "Pedidos", icon: "receipt-outline" },
     { key: "caixa", label: "Caixa", icon: "cash-outline" },
-    { key: "relatorios", label: "Relatórios", icon: "analytics-outline" },
+    { key: "relatorios", label: "Relatórios", icon: "analytics-outline", feature: "salesReports" },
     { key: "categorias", label: "Categorias", icon: "albums-outline" },
     { key: "produtos", label: "Produtos", icon: "fast-food-outline" },
     { key: "mesas", label: "Mesas", icon: "restaurant-outline" },
     { key: "garcons", label: "Garçons", icon: "people-outline" },
     { key: "config", label: "Configurações", icon: "settings-outline" },
   ];
-  const mainTabs = tabs.filter((item) => ["dashboard", "a_receber", "pedidos", "caixa"].includes(item.key));
-  const moreTabs = tabs.filter((item) => !["dashboard", "a_receber", "pedidos", "caixa"].includes(item.key));
-  const currentTab = tabs.find((item) => item.key === tab) || tabs[0];
+  const visibleTabs = tabs.filter((item) => !item.feature || !rest || hasPlanFeature(rest, item.feature));
+  const mainTabs = visibleTabs.filter((item) => ["dashboard", "a_receber", "pedidos", "caixa"].includes(item.key));
+  const moreTabs = visibleTabs.filter((item) => !["dashboard", "a_receber", "pedidos", "caixa"].includes(item.key));
+  const currentTab = visibleTabs.find((item) => item.key === tab) || visibleTabs[0] || tabs[0];
   const isMoreSelected = moreTabs.some((item) => item.key === tab);
   const selectTab = (key) => {
+    const target = tabs.find((item) => item.key === key);
+    if (target?.feature && rest && !hasPlanFeature(rest, target.feature)) {
+      Alert.alert("Plano indisponivel", "Este recurso nao esta incluido no plano atual.");
+      return;
+    }
     setMoreOpen(false);
     setTab(key);
   };
+
+  useEffect(() => {
+    if (tab === "relatorios" && rest && !canSalesReports) setTab("dashboard");
+  }, [tab, rest, canSalesReports]);
 
   if (loading && !restauranteId) {
     return (
@@ -1163,19 +1231,19 @@ export default function HubRestauranteScreen({ onLogout }) {
           {tab === "dashboard" && <>
             <LicenseStatusCard info={licenseInfo} />
             <View style={styles.metricGrid}>
-              <Metric label="Faturamento hoje" value={moeda(resumo.totalHoje)} icon="trending-up-outline" tone="pink" />
+              <Metric label={financialReport.scope === "turno" ? "Faturamento do turno" : "Faturamento hoje"} value={moeda(resumo.totalHoje)} icon="trending-up-outline" tone="pink" />
               <Metric label="Ticket médio" value={moeda(resumo.ticketMedio)} icon="stats-chart-outline" tone="orange" />
               <Metric label="Pendentes" value={resumo.pendentes} icon="time-outline" tone="purple" />
               <Metric label="Mesas ocupadas" value={resumo.mesasOcupadas} icon="restaurant-outline" tone="green" />
             </View>
 
-            <FinancialOverview report={todayReport} />
+            <FinancialOverview report={financialReport} />
             <OperationalOverview status={operationStatus} counts={{ categorias: categorias.length, produtos: produtos.length, mesas: mesas.length, garcons: garcons.length }} />
 
             <Card title="Atalhos operacionais" icon="flash-outline" subtitle="Acesse as áreas mais usadas sem procurar no menu.">
               <View style={styles.grid2}>
                 <DashboardTile label="A Receber" subtitle={`${resumo.aReceber} pedido(s)`} icon="notifications-outline" attention={resumo.aReceber > 0} onPress={() => selectTab("a_receber")} />
-                <DashboardTile label="Relatórios" subtitle="Caixa e vendas" icon="analytics-outline" onPress={() => selectTab("relatorios")} />
+                {canSalesReports ? <DashboardTile label="Relatórios" subtitle="Caixa e vendas" icon="analytics-outline" onPress={() => selectTab("relatorios")} /> : null}
                 <DashboardTile label="Produtos" subtitle={`${produtos.length} cadastrados`} icon="fast-food-outline" onPress={() => selectTab("produtos")} />
                 <DashboardTile label="Mesas" subtitle={`${mesas.length} cadastradas`} icon="restaurant-outline" onPress={() => selectTab("mesas")} />
                 <DashboardTile label="Garçons" subtitle={`${garcons.length} acessos`} icon="people-outline" onPress={() => selectTab("garcons")} />
@@ -1205,7 +1273,7 @@ export default function HubRestauranteScreen({ onLogout }) {
           {tab === "a_receber" && <OrdersHubView title="Pedidos A Receber" subtitle="Pedidos confirmados pela vitrine aguardando aceite." pedidos={pedidosAReceber} onStatusChange={atualizarStatusPedidoHub} aReceber />}
           {tab === "pedidos" && <OrdersHubView title="Controle de pedidos" subtitle="Mais novos primeiro, com status e origem." pedidos={pedidos} onStatusChange={atualizarStatusPedidoHub} />}
 
-          {tab === "relatorios" && <ReportsView filter={reportFilter} setFilter={setReportFilter} data={reportData} loading={reportLoading} error={reportError} onLoad={carregarRelatorio} />}
+          {tab === "relatorios" && canSalesReports && <ReportsView filter={reportFilter} setFilter={setReportFilter} data={reportData} loading={reportLoading} error={reportError} onLoad={carregarRelatorio} />}
 
           {tab === "caixa" && <>
             <Card title="Abertura e fechamento" icon="cash-outline" subtitle="O fechamento exige o PIN do operador que abriu o caixa quando houver PIN cadastrado.">
@@ -1250,8 +1318,8 @@ export default function HubRestauranteScreen({ onLogout }) {
               <ToggleLine label="Loja aberta" value={rest.aberto !== false} onValueChange={(v) => setRest({ ...rest, aberto: v })} hint="Controla a disponibilidade da vitrine para novos pedidos." />
               <Button title={saving ? "Salvando..." : "Salvar configurações"} icon="save-outline" onPress={salvarConfig} disabled={saving || !!actionLabel} />
             </Card>
-            <MercadoPagoHubView rest={rest} mpLoading={mpLoading} conectar={conectarMercadoPago} atualizar={atualizarStatusMercadoPago} desconectar={desconectarMercadoPago} toggleCartao={toggleCartaoVitrine} />
-            <WhatsAppBotHubView status={botStatus} qrImageUrl={botQrImageUrl} loading={botLoading} conectar={conectarBot} mostrarQr={buscarQrBot} atualizar={() => carregarStatusBot({ alertar: true })} desconectar={desconectarBot} resetar={resetarBot} />
+            {canOnlinePayments ? <MercadoPagoHubView rest={rest} mpLoading={mpLoading} conectar={conectarMercadoPago} atualizar={atualizarStatusMercadoPago} desconectar={desconectarMercadoPago} toggleCartao={toggleCartaoVitrine} /> : <PlanLockedCard title="Mercado Pago" icon="card-outline" plan="Essencial" text="PIX e cartao no cardapio ficam disponiveis no plano Essencial." />}
+            {canWhatsappBot ? <WhatsAppBotHubView status={botStatus} qrImageUrl={botQrImageUrl} loading={botLoading} conectar={conectarBot} mostrarQr={buscarQrBot} atualizar={() => carregarStatusBot({ alertar: true })} desconectar={desconectarBot} resetar={resetarBot} /> : <PlanLockedCard title="WhatsApp Bot" icon="logo-whatsapp" plan="Profissional" text="Robo no WhatsApp fica disponivel no plano Profissional." />}
           </>}
         </ScrollView>
 
@@ -1281,6 +1349,7 @@ function StatusPill({ ok, pending = false, icon, label }) {
 
 function FinancialOverview({ report }) {
   const r = report?.resumo || {};
+  const isTurno = report?.scope === "turno";
   const payments = [
     ["Dinheiro", r.dinheiro, "cash-outline"],
     ["Pix", r.pix, "qr-code-outline"],
@@ -1292,7 +1361,7 @@ function FinancialOverview({ report }) {
   const total = Number(r.totalVendas || 0);
 
   return (
-    <Card title="Resumo financeiro de hoje" icon="wallet-outline" subtitle="Somente vendas confirmadas pela regra oficial da API.">
+    <Card title={isTurno ? "Resumo financeiro do turno" : "Resumo financeiro de hoje"} icon="wallet-outline" subtitle={isTurno ? "A sessão aberta continua acumulando mesmo depois da meia-noite." : "Somente vendas confirmadas pela regra oficial da API."}>
       <View style={styles.financialHero}>
         <View style={{ flex: 1 }}>
           <Text style={styles.financialEyebrow}>TOTAL CONFIRMADO</Text>
@@ -1310,7 +1379,7 @@ function FinancialOverview({ report }) {
             </View>
           ))}
         </View>
-      ) : <Text style={styles.infoBox}>Ainda não há vendas confirmadas hoje.</Text>}
+      ) : <Text style={styles.infoBox}>{isTurno ? "Ainda não há vendas confirmadas neste turno." : "Ainda não há vendas confirmadas hoje."}</Text>}
     </Card>
   );
 }
@@ -1340,6 +1409,14 @@ function OperationalOverview({ status, counts }) {
         <Text style={styles.inventoryText}>{counts.mesas} mesas</Text><View style={styles.inventoryDivider} />
         <Text style={styles.inventoryText}>{counts.garcons} garçons</Text>
       </View>
+    </Card>
+  );
+}
+
+function PlanLockedCard({ title, icon, plan, text }) {
+  return (
+    <Card title={title} icon={icon} subtitle={`Disponivel a partir do plano ${plan}.`}>
+      <Text style={styles.infoBox}>{text}</Text>
     </Card>
   );
 }
@@ -1530,7 +1607,7 @@ function GarconsHubView({ garcomForm, setGarcomForm, garcomEditandoId, setPermGa
     ["verPedidos", "Ver pedidos", "eye-outline"], ["verMesas", "Ver mesas", "restaurant-outline"], ["abrirMesa", "Abrir mesa", "lock-open-outline"], ["adicionarItem", "Adicionar item", "add-circle-outline"], ["fecharConta", "Fechar conta", "cash-outline"], ["cancelarPedido", "Cancelar pedido", "ban-outline"],
   ];
   return <>
-    <Card title={garcomEditandoId ? "Editar garçom" : "Cadastrar garçom"} icon="person-add-outline" subtitle={starterMobile ? `Starter Mobile: ${garcons.length}/2 garçons cadastrados.` : "Cadastre acesso, PIN e permissões do app."} action={(garcomEditandoId || garcomForm.nome) ? <MiniButton title="Limpar" icon="close-outline" onPress={limparGarcom} /> : null}>
+    <Card title={garcomEditandoId ? "Editar garçom" : "Cadastrar garçom"} icon="person-add-outline" subtitle={starterMobile ? `Start Mobile: ${garcons.length}/1 garcom cadastrado.` : "Cadastre acesso, PIN e permissões do app."} action={(garcomEditandoId || garcomForm.nome) ? <MiniButton title="Limpar" icon="close-outline" onPress={limparGarcom} /> : null}>
       <Field label="Nome" value={garcomForm.nome} onChangeText={(v) => setGarcomForm({ ...garcomForm, nome: v })} />
       <Field label="Apelido" value={garcomForm.apelido} onChangeText={(v) => setGarcomForm({ ...garcomForm, apelido: v })} />
       <Field label="Telefone" value={garcomForm.telefone} onChangeText={(v) => setGarcomForm({ ...garcomForm, telefone: v })} keyboardType="phone-pad" />
@@ -1693,16 +1770,14 @@ function LicenseStatusCard({ info }) {
 function CategoriasView(props) {
   const { categoriaForm, setCategoriaForm, setCategoriaTipo, tipoExtraForm, setTipoExtraForm, tipoExtraItem, setTipoExtraItem, adicionarItemAoTipoExtra, adicionarTipoExtraCategoria, removerTipoExtraCategoria, salvarCategoria, limparCategoria, categoriaEditandoId, categorias, categoriasFiltradas, categoriaBusca, setCategoriaBusca, iniciarEdicaoCategoria, deletarCategoria } = props;
   return <>
-    <Card title={categoriaEditandoId ? "Editar categoria" : "Cadastrar categoria"} icon="albums-outline" subtitle="Configure categorias simples, pizzas, bordas, adicionais e extras." action={(categoriaEditandoId || categoriaForm.nome) ? <MiniButton title="Limpar" icon="close-outline" onPress={limparCategoria} /> : null}>
-      <View style={styles.formHero}><Ionicons name="sparkles-outline" size={20} color="#ff3b8a" /><Text style={styles.formHeroText}>Use categorias para controlar o comportamento do cardápio e liberar opções no produto.</Text></View>
+    <Card title={categoriaEditandoId ? "Editar categoria" : "Cadastrar categoria"} icon="albums-outline" subtitle="Configure categorias simples ou pizza; sabores e cálculo ficam no produto." action={(categoriaEditandoId || categoriaForm.nome) ? <MiniButton title="Limpar" icon="close-outline" onPress={limparCategoria} /> : null}>
+      <View style={styles.formHero}><Ionicons name="sparkles-outline" size={20} color="#ff3b8a" /><Text style={styles.formHeroText}>Use categorias para liberar bordas, adicionais e grupos extras. Quantidade de sabores e cálculo de pizza são definidos no item.</Text></View>
       <Field label="Nome da categoria" value={categoriaForm.nome} onChangeText={(v) => setCategoriaForm({ ...categoriaForm, nome: v })} />
       <Text style={styles.label}>Tipo da categoria</Text>
       <View style={styles.chipRow}>
         <OptionChip icon="fast-food-outline" label="Simples" active={categoriaForm.tipoCategoria === TIPO_CATEGORIA.SIMPLES} onPress={() => setCategoriaTipo(TIPO_CATEGORIA.SIMPLES)} />
         <OptionChip icon="pizza-outline" label="Pizza" active={categoriaForm.tipoCategoria === TIPO_CATEGORIA.PIZZA} onPress={() => setCategoriaTipo(TIPO_CATEGORIA.PIZZA)} />
-        <OptionChip icon="git-merge-outline" label="Pizza 2 sabores" active={categoriaForm.tipoCategoria === TIPO_CATEGORIA.PIZZA_DUAS} onPress={() => setCategoriaTipo(TIPO_CATEGORIA.PIZZA_DUAS)} />
       </View>
-      {categoriaForm.tipoCategoria === TIPO_CATEGORIA.PIZZA_DUAS ? <Text style={styles.infoBox}>Pizza 2 sabores: cliente escolhe 2 sabores e o preço pode seguir maior valor ou média.</Text> : null}
       {categoriaForm.tipoCategoria !== TIPO_CATEGORIA.SIMPLES ? <>
         <ToggleLine label="Permite bordas" value={categoriaForm.permiteBordas} onValueChange={(v) => setCategoriaForm({ ...categoriaForm, permiteBordas: v })} />
         <ToggleLine label="Permite adicionais" value={categoriaForm.permiteAdicionais} onValueChange={(v) => setCategoriaForm({ ...categoriaForm, permiteAdicionais: v })} />
@@ -1743,9 +1818,9 @@ function ProdutosView(props) {
       <Text style={styles.label}>Tipo do item</Text>
       <View style={styles.chipRow}>
         <OptionChip label="Item comum" active={(produtoForm.tipoItem || "comum") !== "pizza"} onPress={() => setProdutoForm({ ...produtoForm, tipoItem: "comum", tipo: "comum", maxSabores: 1, pizzaMultisabor: false, calculoPrecoPor: "maior" })} />
-        <OptionChip label="Pizza" active={produtoForm.tipoItem === "pizza"} onPress={() => setProdutoForm({ ...produtoForm, tipoItem: "pizza", tipo: "pizza", maxSabores: Math.max(2, Number(produtoForm.maxSabores || 2)), pizzaMultisabor: true })} />
+        <OptionChip label="Pizza" active={produtoForm.tipoItem === "pizza"} onPress={() => { const max = Math.max(1, Number(produtoForm.maxSabores || 1)); setProdutoForm({ ...produtoForm, tipoItem: "pizza", tipo: "pizza", maxSabores: max, pizzaMultisabor: max > 1, calculoPrecoPor: produtoForm.calculoPrecoPor || "maior" }); }} />
       </View>
-      {produtoForm.tipoItem === "pizza" ? <View style={styles.row}><View style={{ flex: 1 }}><Field label="Max. sabores" value={produtoForm.maxSabores} onChangeText={(v) => { const max = Math.max(1, Math.min(12, Number(v || 1))); setProdutoForm({ ...produtoForm, maxSabores: max, pizzaMultisabor: max > 1 }); }} keyboardType="number-pad" /></View><View style={{ width: 10 }} /><View style={{ flex: 1 }}><Text style={styles.label}>Calculo</Text><View style={styles.chipRow}><OptionChip label="Maior" active={(produtoForm.calculoPrecoPor || "maior") !== "media"} onPress={() => setProdutoForm({ ...produtoForm, calculoPrecoPor: "maior" })} /><OptionChip label="Media" active={produtoForm.calculoPrecoPor === "media"} onPress={() => setProdutoForm({ ...produtoForm, calculoPrecoPor: "media" })} /></View></View></View> : null}
+      {produtoForm.tipoItem === "pizza" ? <View style={styles.row}><View style={{ flex: 1 }}><Field label="Sabores do item" value={produtoForm.maxSabores} onChangeText={(v) => { const max = Math.max(1, Math.min(12, Number(v || 1))); setProdutoForm({ ...produtoForm, maxSabores: max, pizzaMultisabor: max > 1, calculoPrecoPor: max > 1 ? produtoForm.calculoPrecoPor || "maior" : "maior" }); }} keyboardType="number-pad" /></View>{Number(produtoForm.maxSabores || 1) > 1 ? <><View style={{ width: 10 }} /><View style={{ flex: 1 }}><Text style={styles.label}>Cálculo do preço</Text><View style={styles.chipRow}><OptionChip label="Maior" active={(produtoForm.calculoPrecoPor || "maior") !== "media"} onPress={() => setProdutoForm({ ...produtoForm, calculoPrecoPor: "maior" })} /><OptionChip label="Média" active={produtoForm.calculoPrecoPor === "media"} onPress={() => setProdutoForm({ ...produtoForm, calculoPrecoPor: "media" })} /></View></View></> : null}</View> : null}
       <Field label="Nome do produto" value={produtoForm.nome} onChangeText={(v) => setProdutoForm({ ...produtoForm, nome: v })} />
       <Field label="Descrição" value={produtoForm.descricao} onChangeText={(v) => setProdutoForm({ ...produtoForm, descricao: v })} multiline />
       <View style={styles.row}><View style={{ flex: 1 }}><Field label="Preço base" value={produtoForm.precoBase} onChangeText={(v) => setProdutoForm({ ...produtoForm, precoBase: v })} keyboardType="decimal-pad" /></View><View style={{ width: 10 }} /><View style={{ flex: 1 }}><Field label="Imagem URL" value={produtoForm.imagem} onChangeText={(v) => setProdutoForm({ ...produtoForm, imagem: v })} /></View></View>
@@ -1787,7 +1862,7 @@ function GrupoExtraProduto({ tipo, items, temp, setTemp, onAdd, onRemove }) {
 }
 
 function CategoryItem({ cat, onEdit, onDelete }) {
-  const tipo = cat.tipoCategoria || (cat.pizzaMultisabor ? "pizza 2 sabores" : cat.permiteSabores ? "pizza" : "simples");
+  const tipo = cat.tipoCategoria === TIPO_CATEGORIA.SIMPLES ? "simples" : (cat.permiteSabores || cat.pizzaMultisabor || cat.tipoCategoria === "pizza" ? "pizza" : "simples");
   return <View style={styles.entityCard}><View style={styles.entityIcon}><Ionicons name={tipo.includes("pizza") ? "pizza-outline" : "albums-outline"} size={20} color="#ff3b8a" /></View><View style={{ flex: 1 }}><Text style={styles.categoryName}>{cat.nome}</Text><Text style={styles.categoryMeta}>{cat.ativa === false ? "Inativa" : "Ativa"} • {tipo} • {(cat.tiposExtras || []).length} grupos extras</Text></View><View style={styles.entityActions}><MiniButton title="Editar" icon="create-outline" onPress={() => onEdit(cat)} /><MiniButton title="Excluir" danger icon="trash-outline" onPress={() => onDelete(cat)} /></View></View>;
 }
 
