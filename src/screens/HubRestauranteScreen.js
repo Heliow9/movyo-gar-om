@@ -201,7 +201,7 @@ const emptyProduto = () => ({ nome: "", descricao: "", precoBase: "", imagem: ""
 const emptyCategoria = () => ({ nome: "", tipoCategoria: TIPO_CATEGORIA.SIMPLES, permiteSabores: false, permiteBordas: false, permiteAdicionais: false, tiposExtras: [], pizzaMultisabor: false, calculoPrecoPor: "maior", ativa: true });
 const emptyTipoExtra = () => ({ nome: "", obrigatorio: false, tipoSelecion: "unico", minimoSelecionados: "0", maximoSelecionados: "1", itens: [] });
 const emptyItemPreco = () => ({ nome: "", preco: "" });
-const DEFAULT_GARCOM_PERMS = { verPedidos: true, verMesas: true, abrirMesa: true, adicionarItem: true, fecharConta: false, cancelarPedido: false };
+const DEFAULT_GARCOM_PERMS = { verPedidos: true, verMesas: true, abrirMesa: true, adicionarItem: true, fecharConta: false, cancelarPedido: false, cancelarSemPinGerente: false };
 const emptyGarcom = () => ({ nome: "", apelido: "", telefone: "", pin: "1234", permissoes: { ...DEFAULT_GARCOM_PERMS } });
 const DEFAULT_OPERATOR_PERMS = { abrirCaixa: true, fecharCaixa: true, movimentarCaixa: true, visualizarRelatorios: true, gerenciarOperadores: false };
 const normalizeOperatorPerms = (perms) => ({ ...DEFAULT_OPERATOR_PERMS, ...(perms && typeof perms === "object" ? perms : {}) });
@@ -339,6 +339,7 @@ export default function HubRestauranteScreen({ onLogout }) {
   const [operadoresCaixa, setOperadoresCaixa] = useState([]);
   const [operadorForm, setOperadorForm] = useState(emptyOperador());
   const [operadorEditandoId, setOperadorEditandoId] = useState(null);
+  const [pinOperadorForm, setPinOperadorForm] = useState({ open: false, operador: null, pinAtual: "", novoPin: "", confirmarPin: "" });
   const [caixaForm, setCaixaForm] = useState({ operadorId: "", pin: "", saldoInicial: "0", saldoFinalInformado: "0", observacao: "" });
   const [movimentoCaixaForm, setMovimentoCaixaForm] = useState({ tipo: "sangria", valor: "", descricao: "" });
   const [mpLoading, setMpLoading] = useState(false);
@@ -366,8 +367,8 @@ export default function HubRestauranteScreen({ onLogout }) {
   const operadoresAtivos = useMemo(() => operadoresCaixa.filter((o) => o?.ativo !== false), [operadoresCaixa]);
   const operadorAbertura = useMemo(() => operadoresCaixa.find((o) => String(getId(o)) === String(caixaForm.operadorId)), [operadoresCaixa, caixaForm.operadorId]);
   const operadorFechamento = useMemo(() => operadoresCaixa.find((o) => String(getId(o)) === String(caixa?.operadorId || caixa?.operadorCaixaId)), [operadoresCaixa, caixa]);
-  const fechamentoExigePin = !!String(caixa?.operador?.pin || caixa?.operadorPin || operadorFechamento?.pin || "").trim();
-  const aberturaExigePin = !!String(operadorAbertura?.pin || "").trim();
+  const fechamentoExigePin = caixa?.operador?.pinConfigurado === true || caixa?.operadorPinConfigurado === true || operadorFechamento?.pinConfigurado === true;
+  const aberturaExigePin = operadorAbertura?.pinConfigurado === true;
 
   const categoriaSelecionada = useMemo(() => categorias.find((c) => getId(c) === produtoForm.categoria), [categorias, produtoForm.categoria]);
   const pedidosAReceber = useMemo(() => pedidos.filter(isPedidoAReceberHub), [pedidos]);
@@ -881,13 +882,27 @@ export default function HubRestauranteScreen({ onLogout }) {
     if (!String(operadorForm.nome || "").trim()) return Alert.alert("Ops", "Informe o nome do operador.");
     await runAction(operadorEditandoId ? "Salvando operador..." : "Cadastrando operador...", async () => {
       const payload = { nome: operadorForm.nome.trim(), apelido: operadorForm.apelido?.trim() || null, observacao: operadorForm.observacao || "", ativo: operadorForm.ativo !== false, permissoes: normalizeOperatorPerms(operadorForm.permissoes) };
-      if (!operadorEditandoId || String(operadorForm.pin || "").trim()) payload.pin = String(operadorForm.pin || "").trim();
+      if (!operadorEditandoId) payload.pin = String(operadorForm.pin || "").trim();
       if (operadorEditandoId) await api.put(`/api/caixa/${restauranteId}/operadores/${operadorEditandoId}`, payload); else await api.post(`/api/caixa/${restauranteId}/operadores`, payload);
       limparOperador();
       await load({ silent: true });
     }).catch((e) => Alert.alert("Erro", e?.response?.data?.message || e?.response?.data?.mensagem || e.message));
   };
   const alternarOperador = async (op) => runAction("Atualizando operador...", async () => { await api.patch(`/api/caixa/${restauranteId}/operadores/${getId(op)}/status`, { ativo: !(op.ativo !== false) }); await load({ silent: true }); }).catch((e) => Alert.alert("Erro", e?.response?.data?.message || e?.response?.data?.mensagem || e.message));
+  const abrirAlteracaoPinOperador = (operador) => setPinOperadorForm({ open: true, operador, pinAtual: "", novoPin: "", confirmarPin: "" });
+  const fecharAlteracaoPinOperador = () => setPinOperadorForm({ open: false, operador: null, pinAtual: "", novoPin: "", confirmarPin: "" });
+  const alterarPinOperador = async () => {
+    const { operador, pinAtual, novoPin, confirmarPin } = pinOperadorForm;
+    if (!operador) return;
+    if (!/^\d{4,8}$/.test(String(novoPin || ""))) return Alert.alert("Novo PIN", "Informe de 4 a 8 digitos.");
+    if (novoPin !== confirmarPin) return Alert.alert("Novo PIN", "A confirmacao do PIN nao confere.");
+    await runAction("Alterando PIN...", async () => {
+      await api.patch(`/api/caixa/${restauranteId}/operadores/${getId(operador)}/pin`, { pinAtual, novoPin, confirmarPin });
+      fecharAlteracaoPinOperador();
+      await load({ silent: true });
+      Alert.alert("PIN atualizado", "O novo PIN do operador ja esta ativo.");
+    }).catch((e) => Alert.alert("Erro", e?.response?.data?.message || e?.response?.data?.mensagem || e.message));
+  };
 
   const abrirCaixa = async () => {
     if (!caixaForm.operadorId) return Alert.alert("Operador obrigatório", "Selecione o operador que está abrindo o caixa.");
@@ -955,13 +970,14 @@ export default function HubRestauranteScreen({ onLogout }) {
       await load({ silent: true });
       if (statusFinal === "cancelado") {
         const estorno = response?.data?.estorno || {};
-        if (estorno.status === "erro") {
+        const meio = estorno.meio === "pix" ? " via PIX" : estorno.meio && estorno.meio !== "nao_aplicavel" ? ` via ${estorno.meio}` : "";
+        if (estorno.status === "erro" || estorno.status === "manual") {
           Alert.alert(
-            "Pedido cancelado",
-            `O pedido foi cancelado, mas o estorno automatico precisa de atencao: ${estorno.erro || "verifique no Mercado Pago."}`
+            "Cancelado, estorno pendente",
+            estorno.mensagem || `O pedido foi cancelado, mas o estorno${meio} precisa de confirmacao manual. ${estorno.erro || ""}`.trim()
           );
         } else if (estorno.status === "concluido") {
-          Alert.alert("Pedido cancelado", `Estorno concluido no valor de ${moeda(estorno.valor || 0)}.`);
+          Alert.alert("Pedido e estorno concluidos", `Estorno${meio} realizado com sucesso no valor de ${moeda(estorno.valor || 0)}.`);
         } else {
           Alert.alert("Pedido cancelado", "Cancelamento concluido. Nao havia estorno online aplicavel.");
         }
@@ -1324,7 +1340,7 @@ export default function HubRestauranteScreen({ onLogout }) {
                 <Button title="Abrir caixa" icon="lock-open-outline" onPress={abrirCaixa} />
               </>}
             </Card>
-            <OperadoresCaixaView operadorForm={operadorForm} setOperadorForm={setOperadorForm} operadorEditandoId={operadorEditandoId} operadores={operadoresCaixa} salvarOperador={salvarOperador} limparOperador={limparOperador} iniciarEdicaoOperador={iniciarEdicaoOperador} alternarOperador={alternarOperador} />
+            <OperadoresCaixaView operadorForm={operadorForm} setOperadorForm={setOperadorForm} operadorEditandoId={operadorEditandoId} operadores={operadoresCaixa} salvarOperador={salvarOperador} limparOperador={limparOperador} iniciarEdicaoOperador={iniciarEdicaoOperador} alternarOperador={alternarOperador} abrirAlteracaoPinOperador={abrirAlteracaoPinOperador} />
           </>}
 
           {tab === "garcons" && <GarconsHubView garcomForm={garcomForm} setGarcomForm={setGarcomForm} garcomEditandoId={garcomEditandoId} setPermGarcom={setPermGarcom} limparGarcom={limparGarcom} criarGarcom={criarGarcom} garcomLimitReached={garcomLimitReached} actionLabel={actionLabel} starterMobile={starterMobile} garcons={garcons} iniciarEdicaoGarcom={iniciarEdicaoGarcom} alternarGarcom={alternarGarcom} removerGarcom={removerGarcom} />}
@@ -1350,6 +1366,21 @@ export default function HubRestauranteScreen({ onLogout }) {
         </View>
 
         <MoreMenuModal visible={moreOpen} onClose={() => setMoreOpen(false)} items={moreTabs} activeKey={tab} onSelect={selectTab} />
+        <Modal visible={pinOperadorForm.open} transparent animationType="fade" onRequestClose={fecharAlteracaoPinOperador} statusBarTranslucent>
+          <Pressable style={styles.modalOverlay} onPress={fecharAlteracaoPinOperador}>
+            <Pressable style={styles.moreSheet} onPress={() => {}}>
+              <View style={styles.sheetHandle} />
+              <View style={styles.sheetHeader}>
+                <View><Text style={styles.sheetKicker}>SEGURANCA DO CAIXA</Text><Text style={styles.sheetTitle}>Alterar PIN de {pinOperadorForm.operador?.nome || "operador"}</Text></View>
+                <Pressable onPress={fecharAlteracaoPinOperador} style={styles.sheetClose}><Ionicons name="close-outline" size={22} color="#334155" /></Pressable>
+              </View>
+              {pinOperadorForm.operador?.pinConfigurado ? <Field label="PIN atual" value={pinOperadorForm.pinAtual} onChangeText={(v) => setPinOperadorForm((p) => ({ ...p, pinAtual: v.replace(/\D/g, "").slice(0, 8) }))} keyboardType="number-pad" secureTextEntry /> : null}
+              <Field label="Novo PIN" value={pinOperadorForm.novoPin} onChangeText={(v) => setPinOperadorForm((p) => ({ ...p, novoPin: v.replace(/\D/g, "").slice(0, 8) }))} keyboardType="number-pad" secureTextEntry />
+              <Field label="Confirmar novo PIN" value={pinOperadorForm.confirmarPin} onChangeText={(v) => setPinOperadorForm((p) => ({ ...p, confirmarPin: v.replace(/\D/g, "").slice(0, 8) }))} keyboardType="number-pad" secureTextEntry />
+              <Button title="Atualizar PIN" icon="key-outline" onPress={alterarPinOperador} disabled={!!actionLabel} />
+            </Pressable>
+          </Pressable>
+        </Modal>
       </SafeAreaView>
     </>
   );
@@ -1534,6 +1565,8 @@ function ReportsView({ filter, setFilter, data, loading, error, onLoad }) {
         <ReportSummaryCard label="Faturamento" value={moeda(r.totalVendas)} icon="trending-up-outline" accent />
         <ReportSummaryCard label="Pedidos" value={Number(r.pedidos || 0)} icon="receipt-outline" />
         <ReportSummaryCard label="Caixas" value={Number(r.caixas || 0)} icon="cash-outline" />
+        <ReportSummaryCard label="Itens cancelados" value={Number(r.itensCancelados || 0)} icon="close-circle-outline" />
+        <ReportSummaryCard label="Valor cancelado" value={moeda(r.valorItensCancelados)} icon="return-down-back-outline" />
         <ReportSummaryCard label="Ticket médio" value={moeda(Number(r.pedidos || 0) ? Number(r.totalVendas || 0) / Number(r.pedidos || 1) : 0)} icon="stats-chart-outline" />
       </View>
 
@@ -1549,7 +1582,7 @@ function ReportsView({ filter, setFilter, data, loading, error, onLoad }) {
       <Card title="Detalhamento" icon="list-outline" subtitle={`${data?.linhas?.length || 0} agrupamento(s) no período.`}>
         {loading ? <ActivityIndicator color="#ff3b8a" /> : data?.linhas?.length ? data.linhas.map((line) => (
           <View key={line.chave || line.label} style={styles.reportLine}>
-            <View style={{flex:1}}><Text style={styles.reportLineTitle}>{line.label || line.chave}</Text><Text style={styles.reportLineMeta}>{Number(line.pedidos || 0)} pedido(s) • {Number(line.caixas || 0)} caixa(s)</Text></View>
+            <View style={{flex:1}}><Text style={styles.reportLineTitle}>{line.label || line.chave}</Text><Text style={styles.reportLineMeta}>{Number(line.pedidos || 0)} pedido(s) • {Number(line.caixas || 0)} caixa(s){Number(line.itensCancelados || 0) ? ` • ${Number(line.itensCancelados)} item(ns) cancelado(s) / ${moeda(line.valorItensCancelados)}` : ""}</Text></View>
             <Text style={styles.reportLineValue}>{moeda(line.totalVendas)}</Text>
           </View>
         )) : <EmptyState icon="analytics-outline" text="Gere o relatório para visualizar os dados do período." />}
@@ -1591,15 +1624,15 @@ function MoreMenuModal({ visible, onClose, items, activeKey, onSelect }) {
 }
 
 function OperadorPicker({ operadores, value, onChange }) {
-  return <View style={styles.pickerWrap}><Text style={styles.label}>Operador do caixa</Text><View style={styles.chipRow}>{operadores.length ? operadores.map((op) => <OptionChip key={getId(op)} label={`${op.nome || "Operador"}${String(op.pin || "").trim() ? " • PIN" : ""}`} active={String(value) === String(getId(op))} onPress={() => onChange(getId(op))} icon="person-circle-outline" />) : <Text style={styles.text}>Cadastre um operador abaixo antes de abrir o caixa.</Text>}</View></View>;
+  return <View style={styles.pickerWrap}><Text style={styles.label}>Operador do caixa</Text><View style={styles.chipRow}>{operadores.length ? operadores.map((op) => <OptionChip key={getId(op)} label={`${op.nome || "Operador"}${op.pinConfigurado === true ? " • PIN" : ""}`} active={String(value) === String(getId(op))} onPress={() => onChange(getId(op))} icon="person-circle-outline" />) : <Text style={styles.text}>Cadastre um operador abaixo antes de abrir o caixa.</Text>}</View></View>;
 }
 
-function OperadoresCaixaView({ operadorForm, setOperadorForm, operadorEditandoId, operadores, salvarOperador, limparOperador, iniciarEdicaoOperador, alternarOperador }) {
+function OperadoresCaixaView({ operadorForm, setOperadorForm, operadorEditandoId, operadores, salvarOperador, limparOperador, iniciarEdicaoOperador, alternarOperador, abrirAlteracaoPinOperador }) {
   return <>
     <Card title={operadorEditandoId ? "Editar operador" : "Cadastrar operador de caixa"} icon="person-add-outline" subtitle="Operadores usam PIN para abrir e fechar caixa com segurança." action={(operadorEditandoId || operadorForm.nome) ? <MiniButton title="Limpar" icon="close-outline" onPress={limparOperador} /> : null}>
       <Field label="Nome" value={operadorForm.nome} onChangeText={(v) => setOperadorForm({ ...operadorForm, nome: v })} />
       <Field label="Apelido" value={operadorForm.apelido} onChangeText={(v) => setOperadorForm({ ...operadorForm, apelido: v })} />
-      <Field label={operadorEditandoId ? "Novo PIN (opcional)" : "PIN opcional"} value={operadorForm.pin} onChangeText={(v) => setOperadorForm({ ...operadorForm, pin: v.replace(/\D/g, "").slice(0, 8) })} keyboardType="number-pad" secureTextEntry />
+      {!operadorEditandoId ? <Field label="PIN opcional" value={operadorForm.pin} onChangeText={(v) => setOperadorForm({ ...operadorForm, pin: v.replace(/\D/g, "").slice(0, 8) })} keyboardType="number-pad" secureTextEntry /> : null}
       <Field label="Observação" value={operadorForm.observacao} onChangeText={(v) => setOperadorForm({ ...operadorForm, observacao: v })} />
       <Text style={styles.label}>Permissões do operador</Text>
       {[
@@ -1613,7 +1646,7 @@ function OperadoresCaixaView({ operadorForm, setOperadorForm, operadorEditandoId
       <Button title={operadorEditandoId ? "Salvar operador" : "Cadastrar operador"} icon="save-outline" onPress={salvarOperador} />
     </Card>
     <Card title="Operadores cadastrados" icon="people-outline" subtitle={`${operadores.length} operador(es) no caixa`}>
-      {operadores.length ? operadores.map((op) => <View key={getId(op)} style={styles.entityCard}><View style={styles.entityIcon}><Ionicons name="person-circle-outline" size={20} color="#ff3b8a" /></View><View style={{ flex: 1 }}><Text style={styles.categoryName}>{op.nome}</Text><Text style={styles.categoryMeta}>{op.apelido || "Sem apelido"} • {op.ativo === false ? "Inativo" : "Ativo"} {String(op.pin || "").trim() ? "• com PIN" : ""}</Text></View><View style={styles.entityActions}><MiniButton title="Editar" icon="create-outline" onPress={() => iniciarEdicaoOperador(op)} /><MiniButton title={op.ativo === false ? "Ativar" : "Inativar"} danger={op.ativo !== false} icon="power-outline" onPress={() => alternarOperador(op)} /></View></View>) : <EmptyState icon="people-outline" text="Nenhum operador cadastrado." />}
+      {operadores.length ? operadores.map((op) => <View key={getId(op)} style={styles.entityCard}><View style={styles.entityIcon}><Ionicons name="person-circle-outline" size={20} color="#ff3b8a" /></View><View style={{ flex: 1 }}><Text style={styles.categoryName}>{op.nome}</Text><Text style={styles.categoryMeta}>{op.apelido || "Sem apelido"} • {op.ativo === false ? "Inativo" : "Ativo"} {op.pinConfigurado === true ? "• com PIN" : ""}</Text></View><View style={styles.entityActions}><MiniButton title="PIN" icon="key-outline" onPress={() => abrirAlteracaoPinOperador(op)} /><MiniButton title="Editar" icon="create-outline" onPress={() => iniciarEdicaoOperador(op)} /><MiniButton title={op.ativo === false ? "Ativar" : "Inativar"} danger={op.ativo !== false} icon="power-outline" onPress={() => alternarOperador(op)} /></View></View>) : <EmptyState icon="people-outline" text="Nenhum operador cadastrado." />}
     </Card>
   </>;
 }
@@ -1626,7 +1659,7 @@ function MesasHubList({ mesas, onDelete }) {
 
 function GarconsHubView({ garcomForm, setGarcomForm, garcomEditandoId, setPermGarcom, limparGarcom, criarGarcom, garcomLimitReached, actionLabel, starterMobile, garcons, iniciarEdicaoGarcom, alternarGarcom, removerGarcom }) {
   const perms = [
-    ["verPedidos", "Ver pedidos", "eye-outline"], ["verMesas", "Ver mesas", "restaurant-outline"], ["abrirMesa", "Abrir mesa", "lock-open-outline"], ["adicionarItem", "Adicionar item", "add-circle-outline"], ["fecharConta", "Fechar conta", "cash-outline"], ["cancelarPedido", "Cancelar pedido", "ban-outline"],
+    ["verPedidos", "Ver pedidos", "eye-outline"], ["verMesas", "Ver mesas", "restaurant-outline"], ["abrirMesa", "Abrir mesa", "lock-open-outline"], ["adicionarItem", "Adicionar item", "add-circle-outline"], ["fecharConta", "Fechar conta", "cash-outline"], ["cancelarPedido", "Cancelar pedido", "ban-outline"], ["cancelarSemPinGerente", "Cancelar sem PIN do gerente", "key-outline"],
   ];
   return <>
     <Card title={garcomEditandoId ? "Editar garçom" : "Cadastrar garçom"} icon="person-add-outline" subtitle={starterMobile ? `Start Mobile: ${garcons.length}/1 garcom cadastrado.` : "Cadastre acesso, PIN e permissões do app."} action={(garcomEditandoId || garcomForm.nome) ? <MiniButton title="Limpar" icon="close-outline" onPress={limparGarcom} /> : null}>

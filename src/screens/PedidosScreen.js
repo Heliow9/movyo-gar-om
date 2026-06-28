@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  Modal,
   Animated,
   LayoutAnimation,
   Platform,
@@ -119,9 +120,26 @@ const pickCliente = (p) =>
   safeText(p?.nomeCliente || p?.cliente?.nome || p?.clienteNome || p?.mesaCliente || p?.cliente) ||
   (p?.mesaNumero ? `Mesa ${p.mesaNumero}` : "Cliente");
 const pickNumero = (p) => p?.numeroPedido || p?.numero_pedido || p?.pedidoNumero || p?.codigoPedido || p?.numero || p?.codigo || p?._id?.slice?.(-6) || "—";
-const pickTotal = (p) => p?.total ?? p?.valorTotal ?? p?.valor ?? p?.subtotal ?? 0;
+const pickTotal = (p) =>
+  p?.pedidoOriginalSnapshot?.valorTotal ??
+  p?.pedidoOriginalSnapshot?.total ??
+  p?.valorCancelado ??
+  p?.total ??
+  p?.valorTotal ??
+  p?.valor ??
+  p?.subtotal ??
+  0;
 const pickPagamento = (p) => safeText(p?.formaPagamento || p?.formadePagamento || p?.metodoPagamento || p?.pagamento?.metodo || p?.pagamento || p?.pagamentos?.[0]?.metodo || "Não informado");
-const pickItens = (p) => (Array.isArray(p?.itens) ? p.itens : Array.isArray(p?.items) ? p.items : []);
+const pickItens = (p) => {
+  const ativos = Array.isArray(p?.itens) ? p.itens : Array.isArray(p?.items) ? p.items : [];
+  const cancelados = (Array.isArray(p?.itensCancelados) ? p.itensCancelados : [])
+    .map((registro) => ({ ...(registro?.item || registro), _cancelado: true, _cancelamento: registro }));
+  const snapshot = Array.isArray(p?.pedidoOriginalSnapshot?.itens)
+    ? p.pedidoOriginalSnapshot.itens.map((item) => ({ ...item, _cancelado: true }))
+    : [];
+  if (ativos.length || cancelados.length) return [...ativos, ...cancelados];
+  return snapshot;
+};
 const hasConfirmedPayment = (p) =>
   Number(p?.valorPago || 0) > 0 ||
   normalizeStatus(p?.statusPagamento || p?.pagamento?.status) === "pago" ||
@@ -157,6 +175,16 @@ export default function PedidosScreen({ navigation, route }) {
   const [isOnline, setIsOnline] = useState(true);
   const [fromCache, setFromCache] = useState(false);
   const [canCancelOrders, setCanCancelOrders] = useState(false);
+  const [requiresManagerPin, setRequiresManagerPin] = useState(true);
+  const [cancelDialog, setCancelDialog] = useState({
+    open: false,
+    type: "pedido",
+    pedido: null,
+    itemIndex: null,
+    item: null,
+    motivo: "",
+    pinGerente: "",
+  });
   const pulse = useRef(new Animated.Value(0)).current;
   const modoAReceber = route?.params?.modo === "a_receber";
 
@@ -168,6 +196,10 @@ export default function PedidosScreen({ navigation, route }) {
         session?.garcom?.permissoes?.cancelarPedido === true ||
         session?.garcom?.permissoes?.cancelarPedido === "true";
       setCanCancelOrders(allowed);
+      const semPin = session?.tipo === "restaurante" ||
+        session?.garcom?.permissoes?.cancelarSemPinGerente === true ||
+        session?.garcom?.permissoes?.cancelarSemPinGerente === "true";
+      setRequiresManagerPin(!semPin);
     }).catch(() => {
       if (active) setCanCancelOrders(false);
     });
@@ -326,65 +358,65 @@ export default function PedidosScreen({ navigation, route }) {
   const cancelarPedido = (pedido) => {
     const id = pickPedidoId(pedido);
     if (!id) return;
-
-    Alert.alert("Cancelar pedido", `Deseja cancelar o pedido #${pickNumero(pedido)}?`, [
-      { text: "Voltar", style: "cancel" },
-      {
-        text: "Cancelar pedido",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            setBusyId(id);
-            const response = await api.post(`/api/garcons/app/pedido/${id}/cancelar`, {
-              motivo: "Cancelado pelo app Movyo Hub.",
-              tipoCancelamento: "manual",
-            });
-            await fetchPedidos();
-            const estorno = response?.data?.estorno || {};
-            if (estorno.status === "erro") {
-              Alert.alert(
-                "Pedido cancelado",
-                `O pedido foi cancelado, mas o estorno automatico precisa de atencao: ${estorno.erro || "verifique no Mercado Pago."}`
-              );
-            } else if (estorno.status === "concluido") {
-              Alert.alert("Pedido cancelado", `Estorno concluido no valor de ${money(estorno.valor || 0)}.`);
-            } else {
-              Alert.alert("Pedido cancelado", "Cancelamento concluido.");
-            }
-          } catch (err) {
-            const msg = err?.response?.data?.message || err?.response?.data?.mensagem || "Não foi possível cancelar.";
-            Alert.alert("Ops", msg);
-          } finally {
-            setBusyId(null);
-          }
-        },
-      },
-    ]);
+    setCancelDialog({ open: true, type: "pedido", pedido, itemIndex: null, item: null, motivo: "", pinGerente: "" });
   };
 
   const cancelarItem = (pedido, index, it) => {
     const id = pickPedidoId(pedido);
     if (!id) return;
+    setCancelDialog({ open: true, type: "item", pedido, itemIndex: index, item: it, motivo: "", pinGerente: "" });
+  };
 
-    Alert.alert("Cancelar item", `Cancelar ${itemQty(it)}x ${itemName(it)}?`, [
-      { text: "Voltar", style: "cancel" },
-      {
-        text: "Cancelar item",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            setBusyId(`${id}_${index}`);
-            await api.post(`/api/garcons/app/pedido/${id}/item/${index}/cancelar`, {});
-            await fetchPedidos();
-          } catch (err) {
-            const msg = err?.response?.data?.message || err?.response?.data?.mensagem || "Não foi possível cancelar o item.";
-            Alert.alert("Ops", msg);
-          } finally {
-            setBusyId(null);
-          }
-        },
-      },
-    ]);
+  const confirmarCancelamento = async () => {
+    const pedido = cancelDialog.pedido;
+    const id = pickPedidoId(pedido);
+    if (!id) return;
+    if (requiresManagerPin && !String(cancelDialog.pinGerente || "").trim()) {
+      return Alert.alert("PIN obrigatorio", "Informe o PIN do operador que abriu o caixa.");
+    }
+
+    const busyKey = cancelDialog.type === "item" ? `${id}_${cancelDialog.itemIndex}` : id;
+    try {
+      setBusyId(busyKey);
+      const body = {
+        motivo: String(cancelDialog.motivo || "").trim() || "Cancelado pelo app Movyo Hub.",
+        tipoCancelamento: cancelDialog.type === "item" ? "cancelamento_item" : "manual",
+        pinGerente: String(cancelDialog.pinGerente || "").trim(),
+      };
+      const response = cancelDialog.type === "item"
+        ? await api.post(`/api/garcons/app/pedido/${id}/item/${cancelDialog.itemIndex}/cancelar`, body)
+        : await api.post(`/api/garcons/app/pedido/${id}/cancelar`, body);
+      setCancelDialog((prev) => ({ ...prev, open: false }));
+      await fetchPedidos();
+
+      const estorno = response?.data?.estorno || {};
+      const viaPix = estorno.meio === "pix";
+      if (estorno.status === "erro" || estorno.status === "manual") {
+        Alert.alert(
+          viaPix ? "Falha no estorno via PIX" : "Cancelamento exige atencao",
+          estorno.erro || estorno.mensagem || "Verifique o cancelamento no Mercado Pago."
+        );
+      } else if (estorno.status === "concluido") {
+        Alert.alert(
+          viaPix ? "Estorno via PIX concluido" : "Estorno concluido",
+          `${estorno.mensagem || "Cancelamento concluido com sucesso"} Valor: ${money(estorno.valor || 0)}.`
+        );
+      } else {
+        Alert.alert(
+          cancelDialog.type === "item" ? "Item cancelado" : "Pedido cancelado",
+          estorno.mensagem || "Cancelamento concluido com sucesso."
+        );
+      }
+    } catch (err) {
+      const code = err?.response?.data?.code;
+      if (code === "PIN_GERENTE_NECESSARIO" || code === "PIN_GERENTE_INVALIDO") {
+        setRequiresManagerPin(true);
+      }
+      const msg = err?.response?.data?.message || err?.response?.data?.mensagem || "Nao foi possivel cancelar.";
+      Alert.alert("Cancelamento nao autorizado", msg);
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const renderPedido = (pedido) => {
@@ -393,19 +425,33 @@ export default function PedidosScreen({ navigation, route }) {
     const st = normalizeStatus(pedido?.status);
     const canCancel = canCancelOrders &&
       !["cancelado", "cancelada", "canceled", "cancelled", "entregue", "finalizado", "finalizada", "concluido", "concluida"].includes(st);
-    const canCancelItem = canCancel && !hasConfirmedPayment(pedido);
+    const canCancelItem = canCancel;
 
     return (
-      <View key={id || `${pickNumero(pedido)}_${pickCriadoEm(pedido)}`} style={styles.card}>
+      <View key={id || `${pickNumero(pedido)}_${pickCriadoEm(pedido)}`} style={[styles.card, st === "cancelado" && styles.cardCanceled]}>
         <View style={styles.cardTop}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.orderTitle} numberOfLines={1}>Pedido #{pickNumero(pedido)}</Text>
+            <Text style={[styles.orderTitle, st === "cancelado" && styles.orderTitleCanceled]} numberOfLines={1}>Pedido #{pickNumero(pedido)}</Text>
             <Text style={styles.orderSub} numberOfLines={1}>{pickCliente(pedido)} • {fmtDate(pickCriadoEm(pedido))}</Text>
           </View>
           <View style={[styles.statusPill, st === "cancelado" && styles.statusCancelado]}>
             <Text style={[styles.statusText, st === "cancelado" && styles.statusCanceladoText]}>{statusLabel(st)}</Text>
           </View>
         </View>
+
+        {st === "cancelado" && (
+          <View style={styles.canceledBanner}>
+            <Ionicons name="ban-outline" size={16} color="#b91c1c" />
+            <Text style={styles.canceledBannerText}>
+              Pedido cancelado
+              {pedido?.estornoStatus === "concluido"
+                ? " • estorno concluido"
+                : ["erro", "manual"].includes(normalizeStatus(pedido?.estornoStatus))
+                  ? " • estorno pendente"
+                  : ""}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.infoRow}>
           <View style={styles.infoBadge}><Ionicons name="cash-outline" size={14} color="#083358" /><Text style={styles.infoText}>{money(pickTotal(pedido))}</Text></View>
@@ -416,7 +462,7 @@ export default function PedidosScreen({ navigation, route }) {
 
         <View style={styles.itemsBox}>
           {itens.length ? itens.map((it, idx) => {
-            const itemCanceled = normalizeStatus(it?.status || it?.cozinha?.status) === "cancelado" || it?.cancelado === true;
+            const itemCanceled = it?._cancelado === true || normalizeStatus(it?.status || it?.cozinha?.status) === "cancelado" || it?.cancelado === true;
             return (
               <View key={`${id}_${idx}`} style={styles.itemRow}>
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -547,6 +593,57 @@ export default function PedidosScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={cancelDialog.open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCancelDialog((prev) => ({ ...prev, open: false }))}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.cancelModal}>
+            <View style={styles.cancelModalIcon}><Ionicons name="ban-outline" size={24} color="#b91c1c" /></View>
+            <Text style={styles.cancelModalTitle}>
+              {cancelDialog.type === "item" ? "Cancelar item" : `Cancelar pedido #${pickNumero(cancelDialog.pedido)}`}
+            </Text>
+            <Text style={styles.cancelModalSub}>
+              {cancelDialog.type === "item"
+                ? `${itemQty(cancelDialog.item)}x ${itemName(cancelDialog.item)}`
+                : "O pedido permanecera no historico com destaque de cancelado."}
+            </Text>
+            <TextInput
+              value={cancelDialog.motivo}
+              onChangeText={(motivo) => setCancelDialog((prev) => ({ ...prev, motivo }))}
+              placeholder="Motivo do cancelamento"
+              placeholderTextColor="#94a3b8"
+              style={styles.cancelModalInput}
+            />
+            {requiresManagerPin && (
+              <>
+                <Text style={styles.pinHint}>PIN do operador que abriu o caixa</Text>
+                <TextInput
+                  value={cancelDialog.pinGerente}
+                  onChangeText={(pinGerente) => setCancelDialog((prev) => ({ ...prev, pinGerente: pinGerente.replace(/\D/g, "").slice(0, 8) }))}
+                  placeholder="PIN do gerente"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  style={styles.cancelModalInput}
+                />
+              </>
+            )}
+            <View style={styles.cancelModalActions}>
+              <Pressable onPress={() => setCancelDialog((prev) => ({ ...prev, open: false }))} style={styles.cancelModalBack}>
+                <Text style={styles.cancelModalBackText}>Voltar</Text>
+              </Pressable>
+              <Pressable onPress={confirmarCancelamento} disabled={!!busyId} style={styles.cancelModalConfirm}>
+                {busyId ? <ActivityIndicator color="#fff" /> : <Ionicons name="checkmark" size={18} color="#fff" />}
+                <Text style={styles.cancelModalConfirmText}>Confirmar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -587,13 +684,17 @@ const styles = StyleSheet.create({
   filterTextActive: { color: "#fff" },
   filterCount: { color: "#64748b", fontWeight: "900" },
   card: { marginBottom: 12, borderRadius: 24, padding: 14, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "rgba(15,23,42,0.08)", shadowColor: "#0f172a", shadowOpacity: 0.08, shadowRadius: 18, elevation: 3 },
+  cardCanceled: { backgroundColor: "#fff7f7", borderColor: "#fca5a5", borderLeftWidth: 5, shadowColor: "#991b1b" },
   cardTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   orderTitle: { color: "#0f172a", fontWeight: "900", fontSize: 17, letterSpacing: -0.2 },
+  orderTitleCanceled: { color: "#991b1b", textDecorationLine: "line-through" },
   orderSub: { color: "#64748b", marginTop: 3, fontWeight: "700" },
   statusPill: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: "rgba(255,59,138,0.10)" },
   statusText: { color: "#ff3b8a", fontWeight: "900", fontSize: 12 },
   statusCancelado: { backgroundColor: "#fee2e2" },
   statusCanceladoText: { color: "#ef4444" },
+  canceledBanner: { marginTop: 10, paddingHorizontal: 10, minHeight: 36, borderRadius: 12, backgroundColor: "#fee2e2", borderWidth: 1, borderColor: "#fecaca", flexDirection: "row", alignItems: "center", gap: 8 },
+  canceledBannerText: { flex: 1, color: "#991b1b", fontWeight: "900", fontSize: 12 },
   infoRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   infoBadge: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, height: 32, borderRadius: 999, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: "rgba(15,23,42,0.06)" },
   infoText: { color: "#083358", fontWeight: "900", fontSize: 12 },
@@ -611,4 +712,16 @@ const styles = StyleSheet.create({
   emptyBox: { marginTop: 16, padding: 28, alignItems: "center", borderRadius: 24, backgroundColor: "#fff", borderWidth: 1, borderColor: "rgba(15,23,42,0.08)" },
   emptyTitle: { marginTop: 10, color: "#0f172a", fontWeight: "900", fontSize: 16 },
   emptySub: { marginTop: 4, color: "#64748b", fontWeight: "700" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.65)", alignItems: "center", justifyContent: "center", padding: 20 },
+  cancelModal: { width: "100%", maxWidth: 440, borderRadius: 22, backgroundColor: "#fff", padding: 20, borderWidth: 1, borderColor: "#fecaca" },
+  cancelModalIcon: { width: 48, height: 48, borderRadius: 14, backgroundColor: "#fee2e2", alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  cancelModalTitle: { color: "#0f172a", fontSize: 19, fontWeight: "900" },
+  cancelModalSub: { color: "#64748b", marginTop: 5, marginBottom: 14, fontWeight: "700", lineHeight: 19 },
+  cancelModalInput: { minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: "#cbd5e1", backgroundColor: "#f8fafc", color: "#0f172a", paddingHorizontal: 13, fontWeight: "800", marginBottom: 10 },
+  pinHint: { color: "#475569", fontSize: 12, fontWeight: "900", marginBottom: 6 },
+  cancelModalActions: { flexDirection: "row", gap: 10, marginTop: 4 },
+  cancelModalBack: { flex: 1, height: 44, borderRadius: 14, backgroundColor: "#f1f5f9", alignItems: "center", justifyContent: "center" },
+  cancelModalBackText: { color: "#334155", fontWeight: "900" },
+  cancelModalConfirm: { flex: 1, height: 44, borderRadius: 14, backgroundColor: "#dc2626", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  cancelModalConfirmText: { color: "#fff", fontWeight: "900" },
 });
