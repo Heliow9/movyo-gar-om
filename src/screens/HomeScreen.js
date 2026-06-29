@@ -92,6 +92,21 @@ const countMesasAbertas = (mesas = []) => {
 };
 
 
+const toMoneyNumber = (value) => {
+  if (value == null || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/R\$\s?/gi, "").replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
+const sumMoneyValues = (items, picker) => {
+  if (!Array.isArray(items)) return null;
+  const total = items.reduce((acc, item) => acc + (toMoneyNumber(picker(item)) || 0), 0);
+  return total > 0 ? total : null;
+};
 const norm = (v) => String(v || "").trim().toLowerCase();
 const pickPlano = (session) => norm(session?.restaurante?.plano || session?.restaurante?.planoCodigo || session?.restaurante?.assinatura?.plano || session?.restaurante?.licenca?.plano);
 const isStarterMobilePlan = (session) => ["starter-mobile", "start-mobile", "starter_mobile", "start_mobile"].includes(pickPlano(session));
@@ -107,7 +122,17 @@ const isPedidoAReceber = (pedido) => isOrigemVitrine(pedido) && isStatusAReceber
 const pickPedidoId = (p) => p?._id || p?.id || p?.pedidoId;
 const pickPedidoNumero = (p) => p?.numeroPedido || p?.numero_pedido || p?.pedidoNumero || p?.codigoPedido || p?.numero || p?.codigo || String(pickPedidoId(p) || "").slice(-6);
 const pickPedidoCliente = (p) => p?.nomeCliente || p?.cliente?.nome || p?.clienteNome || p?.mesaCliente || p?.cliente || "Cliente";
-const pickPedidoTotal = (p) => p?.total ?? p?.valorTotal ?? p?.valor ?? p?.subtotal ?? "";
+const pickPedidoTotal = (p = {}) => {
+  const itensTotal = sumMoneyValues(p?.itens || p?.items, (it) => {
+    const qtd = toMoneyNumber(it?.quantidade ?? it?.qtd ?? it?.quantity ?? 1) || 1;
+    return it?.precoTotal ?? it?.subtotal ?? it?.total ?? it?.valorTotal ?? (toMoneyNumber(it?.precoUnitario ?? it?.preco ?? it?.valor) || 0) * qtd;
+  });
+  const pagamentosTotal = sumMoneyValues(p?.pagamentos, (pg) => pg?.valor ?? pg?.total ?? pg?.valorPago);
+  const candidatos = [p?.total, p?.valorTotal, p?.totalPedido, p?.valor, p?.subtotal, p?.totalBruto, p?.valorPago, p?.valorRecebido, p?.totalPago, pagamentosTotal, itensTotal]
+    .map(toMoneyNumber)
+    .filter((n) => n != null);
+  return candidatos.find((n) => n > 0) ?? candidatos[0] ?? 0;
+};
 const normalizePedidoStatusForNotification = (p = {}) =>
   String(p?.status || p?.statusPedido || p?.pedido?.status || "")
     .trim()

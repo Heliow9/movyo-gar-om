@@ -28,7 +28,7 @@
     },
     "android": {
       "package": "com.movyo.garcom",
-      "versionCode": 4,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "backgroundColor": "#0B0F14"

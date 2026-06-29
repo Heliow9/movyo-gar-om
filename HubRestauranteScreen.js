@@ -1363,6 +1363,27 @@ function DashboardTile({ label, subtitle, icon, attention = false, onPress }) {
   );
 }
 
+
+const toMoneyNumberPedidoHub = (pedido = {}) => {
+  const toNum = (value) => {
+    if (value == null || value === "") return null;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    const cleaned = String(value).replace(/R\$\s?/gi, "").replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : null;
+  };
+  const pagamentos = Array.isArray(pedido?.pagamentos) ? pedido.pagamentos.reduce((acc, pg) => acc + (toNum(pg?.valor ?? pg?.total ?? pg?.valorPago) || 0), 0) : null;
+  const itens = Array.isArray(pedido?.itens || pedido?.items) ? (pedido?.itens || pedido?.items).reduce((acc, it) => {
+    const qtd = toNum(it?.quantidade ?? it?.qtd ?? it?.quantity ?? 1) || 1;
+    const valor = toNum(it?.precoTotal ?? it?.subtotal ?? it?.total ?? it?.valorTotal) ?? ((toNum(it?.precoUnitario ?? it?.preco ?? it?.valor) || 0) * qtd);
+    return acc + (valor || 0);
+  }, 0) : null;
+  const candidatos = [pedido?.total, pedido?.valorTotal, pedido?.totalPedido, pedido?.valor, pedido?.subtotal, pedido?.totalBruto, pedido?.valorPago, pedido?.valorRecebido, pedido?.totalPago, pagamentos, itens]
+    .map(toNum)
+    .filter((n) => n != null);
+  return candidatos.find((n) => n > 0) ?? candidatos[0] ?? 0;
+};
+
 const ORDER_STATUS_META = {
   novo: ["Novo", "#be123c", "#fff1f2"],
   pendente: ["Pendente", "#a16207", "#fefce8"],
@@ -1388,7 +1409,7 @@ function OrdersHubView({ title, subtitle, pedidos = [], onStatusChange, aReceber
     <Card title={title} icon={aReceber ? "notifications-outline" : "receipt-outline"} subtitle={subtitle || `${list.length} pedido(s) exibido(s)`}>
       {list.length ? list.map((pedido) => {
         const status = normalizeText(pedido.status || pedido.statusPedido).replace(/-/g, "_");
-        const total = Number(pedido.total || pedido.valorTotal || pedido.totalPedido || 0);
+        const total = toMoneyNumberPedidoHub(pedido);
         const customer = pedido?.cliente?.nome || pedido.nomeCliente || pedido.clienteNome || "Cliente";
         const origem = pedido.origem || pedido.tipo || pedido.canal || "restaurante";
         const nextActions = [];

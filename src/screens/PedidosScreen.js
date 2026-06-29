@@ -65,6 +65,32 @@ const money = (v) => {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 };
 
+
+const toMoneyNumber = (value) => {
+  if (value == null || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const cleaned = value
+      .replace(/R\$\s?/gi, "")
+      .replace(/\s/g, "")
+      .replace(/\.(?=\d{3}(\D|$))/g, "")
+      .replace(",", ".");
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
+
+const sumValues = (items, picker) => {
+  if (!Array.isArray(items)) return null;
+  const total = items.reduce((acc, item) => {
+    const picked = picker(item);
+    const n = toMoneyNumber(picked);
+    return acc + (n || 0);
+  }, 0);
+  return total > 0 ? total : null;
+};
+
 const safeText = (v) => {
   if (v == null) return "";
   if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v);
@@ -120,15 +146,32 @@ const pickCliente = (p) =>
   safeText(p?.nomeCliente || p?.cliente?.nome || p?.clienteNome || p?.mesaCliente || p?.cliente) ||
   (p?.mesaNumero ? `Mesa ${p.mesaNumero}` : "Cliente");
 const pickNumero = (p) => p?.numeroPedido || p?.numero_pedido || p?.pedidoNumero || p?.codigoPedido || p?.numero || p?.codigo || p?._id?.slice?.(-6) || "—";
-const pickTotal = (p) =>
-  p?.pedidoOriginalSnapshot?.valorTotal ??
-  p?.pedidoOriginalSnapshot?.total ??
-  p?.valorCancelado ??
-  p?.total ??
-  p?.valorTotal ??
-  p?.valor ??
-  p?.subtotal ??
-  0;
+const pickTotal = (p = {}) => {
+  const itensTotal = sumValues(p?.itens || p?.items, (it) => {
+    const qtd = toMoneyNumber(it?.quantidade ?? it?.qtd ?? it?.quantity ?? 1) || 1;
+    return it?.precoTotal ?? it?.subtotal ?? it?.total ?? it?.valorTotal ?? (toMoneyNumber(it?.precoUnitario ?? it?.preco ?? it?.valor) || 0) * qtd;
+  });
+  const pagamentosTotal = sumValues(p?.pagamentos, (pg) => pg?.valor ?? pg?.total ?? pg?.valorPago);
+  const snapshot = p?.pedidoOriginalSnapshot || {};
+  const candidatos = [
+    p?.total,
+    p?.valorTotal,
+    p?.totalPedido,
+    p?.valor,
+    p?.subtotal,
+    p?.totalBruto,
+    p?.valorPago,
+    p?.valorRecebido,
+    p?.totalPago,
+    pagamentosTotal,
+    itensTotal,
+    snapshot?.valorTotal,
+    snapshot?.total,
+    p?.valorCancelado,
+  ].map(toMoneyNumber).filter((n) => n != null);
+  const positivo = candidatos.find((n) => n > 0);
+  return positivo ?? candidatos[0] ?? 0;
+};
 const pickPagamento = (p) => safeText(p?.formaPagamento || p?.formadePagamento || p?.metodoPagamento || p?.pagamento?.metodo || p?.pagamento || p?.pagamentos?.[0]?.metodo || "Não informado");
 const pickItens = (p) => {
   const ativos = Array.isArray(p?.itens) ? p.itens : Array.isArray(p?.items) ? p.items : [];
