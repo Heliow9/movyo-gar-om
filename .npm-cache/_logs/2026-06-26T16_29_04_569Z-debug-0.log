@@ -1,0 +1,869 @@
+0 verbose cli C:\nvm\nodejs\node.exe C:\nvm\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.3.0
+2 info using node@v24.1.0
+3 silly config load:file:C:\nvm\v24.1.0\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\.npmrc
+5 silly config load:file:C:\Users\Helio Livramento\.npmrc
+6 silly config load:file:C:\nvm\nodejs\etc\npmrc
+7 verbose title npm install react-dom@19.1.0 react-native-web@0.21.0
+8 verbose argv "install" "react-dom@19.1.0" "react-native-web@0.21.0" "--cache" ".npm-cache" "--no-audit" "--no-fund"
+9 verbose logfile logs-max:10 dir:C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\.npm-cache\_logs\2026-06-26T16_29_04_569Z-
+10 verbose logfile C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\.npm-cache\_logs\2026-06-26T16_29_04_569Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 silly idealTree buildDeps
+14 silly fetch manifest react-dom@19.1.0
+15 silly packumentCache full:https://registry.npmjs.org/react-dom cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/npm 2109ms
+17 http fetch GET 200 https://registry.npmjs.org/react-dom 1434ms (cache miss)
+18 silly packumentCache full:https://registry.npmjs.org/react-dom set size:undefined disposed:false
+19 silly fetch manifest react@19.1.0
+20 silly packumentCache full:https://registry.npmjs.org/react cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/react 307ms (cache miss)
+22 silly packumentCache full:https://registry.npmjs.org/react set size:undefined disposed:false
+23 silly fetch manifest react-native-web@0.21.0
+24 silly packumentCache full:https://registry.npmjs.org/react-native-web cache-miss
+25 http fetch GET 200 https://registry.npmjs.org/react-native-web 129ms (cache miss)
+26 silly packumentCache full:https://registry.npmjs.org/react-native-web set size:undefined disposed:false
+27 silly placeDep ROOT react-dom@19.1.0 REPLACE for: movyo-garcom@1.3.2 want: 19.1.0
+28 silly placeDep ROOT react-native-web@0.21.0 REPLACE for: movyo-garcom@1.3.2 want: 0.21.0
+29 silly reify mark retired [
+29 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\cross-fetch'
+29 silly reify ]
+30 silly reify mark retired [
+30 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\css-in-js-utils'
+30 silly reify ]
+31 silly reify mark retired [
+31 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\fbjs'
+31 silly reify ]
+32 silly reify mark retired [
+32 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\fbjs-css-vars'
+32 silly reify ]
+33 silly reify mark retired [
+33 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\fsevents'
+33 silly reify ]
+34 silly reify mark retired [
+34 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\hyphenate-style-name'
+34 silly reify ]
+35 silly reify mark retired [
+35 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\inline-style-prefixer'
+35 silly reify ]
+36 silly reify mark retired [
+36 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-darwin-arm64'
+36 silly reify ]
+37 silly reify mark retired [
+37 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-android-arm64'
+37 silly reify ]
+38 silly reify mark retired [
+38 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-darwin-x64'
+38 silly reify ]
+39 silly reify mark retired [
+39 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-freebsd-x64'
+39 silly reify ]
+40 silly reify mark retired [
+40 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-arm64-gnu'
+40 silly reify ]
+41 silly reify mark retired [
+41 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-arm64-musl'
+41 silly reify ]
+42 silly reify mark retired [
+42 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-arm-gnueabihf'
+42 silly reify ]
+43 silly reify mark retired [
+43 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-x64-gnu'
+43 silly reify ]
+44 silly reify mark retired [
+44 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-win32-arm64-msvc'
+44 silly reify ]
+45 silly reify mark retired [
+45 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-x64-musl'
+45 silly reify ]
+46 silly reify mark retired [
+46 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\node-fetch'
+46 silly reify ]
+47 silly reify mark retired [
+47 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\postcss-value-parser'
+47 silly reify ]
+48 silly reify mark retired [
+48 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\react-dom'
+48 silly reify ]
+49 silly reify mark retired [
+49 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\react-native-web'
+49 silly reify ]
+50 silly reify mark retired [
+50 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\setimmediate'
+50 silly reify ]
+51 silly reify mark retired [
+51 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\styleq'
+51 silly reify ]
+52 silly reify mark retired [
+52 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\tr46'
+52 silly reify ]
+53 silly reify mark retired [
+53 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\ua-parser-js'
+53 silly reify ]
+54 silly reify mark retired [
+54 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\whatwg-url'
+54 silly reify ]
+55 silly reify mark retired [
+55 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@react-native-community\\netinfo'
+55 silly reify ]
+56 silly reify mark retired [
+56 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\acorn',
+56 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\acorn',
+56 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\acorn.cmd',
+56 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\acorn.ps1'
+56 silly reify ]
+57 silly reify mark retired [
+57 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\semver',
+57 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver',
+57 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver.cmd',
+57 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver.ps1'
+57 silly reify ]
+58 silly reify mark retired [
+58 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\baseline-browser-mapping',
+58 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\baseline-browser-mapping',
+58 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\baseline-browser-mapping.cmd',
+58 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\baseline-browser-mapping.ps1'
+58 silly reify ]
+59 silly reify mark retired [
+59 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\browserslist',
+59 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\browserslist',
+59 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\browserslist.cmd',
+59 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\browserslist.ps1'
+59 silly reify ]
+60 silly reify mark retired [
+60 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\chrome-launcher',
+60 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\print-chrome-path',
+60 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\print-chrome-path.cmd',
+60 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\print-chrome-path.ps1'
+60 silly reify ]
+61 silly reify mark retired [
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\expo',
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo',
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo.cmd',
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo.ps1',
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-modules-autolinking',
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-modules-autolinking.cmd',
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-modules-autolinking.ps1',
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\fingerprint',
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\fingerprint.cmd',
+61 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\fingerprint.ps1'
+61 silly reify ]
+62 silly reify mark retired [
+62 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\esprima',
+62 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esparse',
+62 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esparse.cmd',
+62 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esparse.ps1',
+62 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esvalidate',
+62 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esvalidate.cmd',
+62 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esvalidate.ps1'
+62 silly reify ]
+63 silly reify mark retired [
+63 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\expo-modules-autolinking',
+63 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-modules-autolinking',
+63 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-modules-autolinking.cmd',
+63 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-modules-autolinking.ps1'
+63 silly reify ]
+64 silly reify mark retired [
+64 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\expo-updates',
+64 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-updates',
+64 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-updates.cmd',
+64 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-updates.ps1'
+64 silly reify ]
+65 silly reify mark retired [
+65 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\image-size',
+65 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\image-size',
+65 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\image-size.cmd',
+65 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\image-size.ps1'
+65 silly reify ]
+66 silly reify mark retired [
+66 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\is-docker',
+66 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\is-docker',
+66 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\is-docker.cmd',
+66 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\is-docker.ps1'
+66 silly reify ]
+67 silly reify mark retired [
+67 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\semver',
+67 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.bin\\semver',
+67 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.bin\\semver.cmd',
+67 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.bin\\semver.ps1'
+67 silly reify ]
+68 silly reify mark retired [
+68 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\json5',
+68 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\json5',
+68 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\json5.cmd',
+68 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\json5.ps1'
+68 silly reify ]
+69 silly reify mark retired [
+69 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\js-yaml',
+69 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\js-yaml',
+69 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\js-yaml.cmd',
+69 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\js-yaml.ps1'
+69 silly reify ]
+70 silly reify mark retired [
+70 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\jsesc',
+70 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\jsesc',
+70 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\jsesc.cmd',
+70 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\jsesc.ps1'
+70 silly reify ]
+71 silly reify mark retired [
+71 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lan-network',
+71 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\lan-network',
+71 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\lan-network.cmd',
+71 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\lan-network.ps1'
+71 silly reify ]
+72 silly reify mark retired [
+72 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\metro',
+72 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro',
+72 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro.cmd',
+72 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro.ps1'
+72 silly reify ]
+73 silly reify mark retired [
+73 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\loose-envify',
+73 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\loose-envify',
+73 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\loose-envify.cmd',
+73 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\loose-envify.ps1'
+73 silly reify ]
+74 silly reify mark retired [
+74 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\mime',
+74 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mime',
+74 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mime.cmd',
+74 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mime.ps1'
+74 silly reify ]
+75 silly reify mark retired [
+75 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\metro-symbolicate',
+75 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro-symbolicate',
+75 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro-symbolicate.cmd',
+75 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro-symbolicate.ps1'
+75 silly reify ]
+76 silly reify mark retired [
+76 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\mkdirp',
+76 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mkdirp',
+76 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mkdirp.cmd',
+76 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mkdirp.ps1'
+76 silly reify ]
+77 silly reify mark retired [
+77 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\nanoid',
+77 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\nanoid',
+77 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\nanoid.cmd',
+77 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\nanoid.ps1'
+77 silly reify ]
+78 silly reify mark retired [
+78 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\qrcode-terminal',
+78 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\qrcode-terminal',
+78 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\qrcode-terminal.cmd',
+78 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\qrcode-terminal.ps1'
+78 silly reify ]
+79 silly reify mark retired [
+79 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\react-native',
+79 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\react-native',
+79 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\react-native.cmd',
+79 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\react-native.ps1'
+79 silly reify ]
+80 silly reify mark retired [
+80 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\rc',
+80 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rc',
+80 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rc.cmd',
+80 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rc.ps1'
+80 silly reify ]
+81 silly reify mark retired [
+81 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\resolve',
+81 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\resolve',
+81 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\resolve.cmd',
+81 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\resolve.ps1'
+81 silly reify ]
+82 silly reify mark retired [
+82 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\regjsparser',
+82 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\regjsparser',
+82 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\regjsparser.cmd',
+82 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\regjsparser.ps1'
+82 silly reify ]
+83 silly reify mark retired [
+83 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\semver',
+83 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\semver',
+83 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\semver.cmd',
+83 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\semver.ps1'
+83 silly reify ]
+84 silly reify mark retired [
+84 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\rimraf',
+84 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rimraf',
+84 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rimraf.cmd',
+84 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rimraf.ps1'
+84 silly reify ]
+85 silly reify mark retired [
+85 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\sucrase',
+85 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase',
+85 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase.cmd',
+85 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase.ps1',
+85 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase-node',
+85 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase-node.cmd',
+85 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase-node.ps1'
+85 silly reify ]
+86 silly reify mark retired [
+86 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\terser',
+86 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\terser',
+86 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\terser.cmd',
+86 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\terser.ps1'
+86 silly reify ]
+87 silly reify mark retired [
+87 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\update-browserslist-db',
+87 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\update-browserslist-db',
+87 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\update-browserslist-db.cmd',
+87 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\update-browserslist-db.ps1'
+87 silly reify ]
+88 silly reify mark retired [
+88 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\uuid',
+88 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\uuid',
+88 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\uuid.cmd',
+88 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\uuid.ps1'
+88 silly reify ]
+89 silly reify mark retired [
+89 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\which',
+89 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\node-which',
+89 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\node-which.cmd',
+89 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\node-which.ps1'
+89 silly reify ]
+90 silly reify mark retired [
+90 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\yaml',
+90 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\yaml',
+90 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\yaml.cmd',
+90 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\yaml.ps1'
+90 silly reify ]
+91 silly reify mark retired [
+91 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\semver',
+91 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.bin\\semver',
+91 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.bin\\semver.cmd',
+91 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.bin\\semver.ps1'
+91 silly reify ]
+92 silly reify mark retired [
+92 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\semver',
+92 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver',
+92 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver.cmd',
+92 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver.ps1'
+92 silly reify ]
+93 silly reify mark retired [
+93 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\semver',
+93 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver',
+93 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver.cmd',
+93 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver.ps1'
+93 silly reify ]
+94 silly reify mark retired [
+94 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\semver',
+94 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver',
+94 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver.cmd',
+94 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver.ps1'
+94 silly reify ]
+95 silly reify mark retired [
+95 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\parser',
+95 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\parser',
+95 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\parser.cmd',
+95 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\parser.ps1'
+95 silly reify ]
+96 silly reify mark retired [
+96 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\semver',
+96 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.bin\\semver',
+96 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.bin\\semver.cmd',
+96 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.bin\\semver.ps1'
+96 silly reify ]
+97 silly reify mark retired [
+97 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@expo\\fingerprint',
+97 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\fingerprint',
+97 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\fingerprint.cmd',
+97 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\fingerprint.ps1'
+97 silly reify ]
+98 silly reify mark retired [
+98 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@expo\\xcpretty',
+98 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\excpretty',
+98 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\excpretty.cmd',
+98 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\excpretty.ps1'
+98 silly reify ]
+99 silly reify moves {
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\cross-fetch': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.cross-fetch-bxsd5dDt',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\css-in-js-utils': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.css-in-js-utils-KL5ycrUr',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\fbjs': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.fbjs-qQS3JBw3',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\fbjs-css-vars': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.fbjs-css-vars-ShyJC6m0',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\fsevents': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.fsevents-d2xWenYD',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\hyphenate-style-name': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.hyphenate-style-name-YMoefK2n',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\inline-style-prefixer': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.inline-style-prefixer-dTla08BY',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-darwin-arm64': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-darwin-arm64-6wzcobOQ',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-android-arm64': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-android-arm64-7PNbv6cv',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-darwin-x64': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-darwin-x64-7Hag4cJn',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-freebsd-x64': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-freebsd-x64-NV8uQv89',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-arm64-gnu': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-linux-arm64-gnu-Kosf4KLX',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-arm64-musl': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-linux-arm64-musl-DUmtg0Ma',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-arm-gnueabihf': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-linux-arm-gnueabihf-Oi77b9fI',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-x64-gnu': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-linux-x64-gnu-jyNkUtxh',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-win32-arm64-msvc': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-win32-arm64-msvc-JEAgZs7F',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-x64-musl': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lightningcss-linux-x64-musl-5X2Jtjga',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\node-fetch': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.node-fetch-LMm39wa1',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\postcss-value-parser': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.postcss-value-parser-lpzLaAhm',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\react-dom': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.react-dom-7jEEpQiQ',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\react-native-web': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.react-native-web-JogZ9fpz',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\setimmediate': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.setimmediate-SbNyaTGM',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\styleq': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.styleq-4d4oNLKr',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\tr46': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.tr46-yTm8AOA2',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\ua-parser-js': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.ua-parser-js-4bnr8q8X',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\whatwg-url': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.whatwg-url-hpcUrGid',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@react-native-community\\netinfo': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@react-native-community\\.netinfo-zbPjRNPB',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\acorn': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.acorn-M5xVjDJl',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\acorn': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.acorn-fe8sYQJP',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\acorn.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.acorn.cmd-or2L0FR2',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\acorn.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.acorn.ps1-FKbR0zVt',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.semver-NuNHVw35',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\.semver-QP9XtzQr',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\.semver.cmd-dHVvDjyx',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\.semver.ps1-w5ZZjKXh',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\baseline-browser-mapping': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.baseline-browser-mapping-lbhrvHx1',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\baseline-browser-mapping': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.baseline-browser-mapping-5zBlQYxE',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\baseline-browser-mapping.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.baseline-browser-mapping.cmd-eCLlo8DD',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\baseline-browser-mapping.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.baseline-browser-mapping.ps1-emKRtFY9',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\browserslist': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.browserslist-pJMpO57d',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\browserslist': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.browserslist-Z3kwZRDm',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\browserslist.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.browserslist.cmd-AA4dNv8k',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\browserslist.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.browserslist.ps1-Hz8dSXbE',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\chrome-launcher': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.chrome-launcher-4i4zDF0h',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\print-chrome-path': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.print-chrome-path-ogD48jjB',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\print-chrome-path.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.print-chrome-path.cmd-Rka6gi1Z',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\print-chrome-path.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.print-chrome-path.ps1-jrG0lECG',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\expo': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.expo-mmt8XvgN',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.expo-HNa0aCfM',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.expo.cmd-BCKOgMKk',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.expo.ps1-rIYWWxpy',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-modules-autolinking': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.expo-modules-autolinking-wu1qqyQ5',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-modules-autolinking.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.expo-modules-autolinking.cmd-Rmc37i1D',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-modules-autolinking.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.expo-modules-autolinking.ps1-gBL7eDwB',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\fingerprint': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.fingerprint-R5xSvgJP',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\fingerprint.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.fingerprint.cmd-G3DLvsgf',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\fingerprint.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.fingerprint.ps1-hwlGvVQF',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\esprima': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.esprima-3C2UzG9g',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esparse': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.esparse-IZcYiMoN',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esparse.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.esparse.cmd-NwcaQ9Om',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esparse.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.esparse.ps1-DRffcT7D',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esvalidate': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.esvalidate-PYu7mCbT',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esvalidate.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.esvalidate.cmd-5t29PTn8',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\esvalidate.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.esvalidate.ps1-JIB8yO39',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\expo-modules-autolinking': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.expo-modules-autolinking-vV3rjNMs',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\expo-updates': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.expo-updates-fTiVcjUW',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-updates': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.expo-updates-HvgSmTJG',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-updates.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.expo-updates.cmd-14ADenvP',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\expo-updates.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.expo-updates.ps1-Cf37xdMG',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\image-size': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.image-size-9Pxqg5pb',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\image-size': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.image-size-95iF9RIm',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\image-size.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.image-size.cmd-cQSkPdA7',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\image-size.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.image-size.ps1-uxl498tx',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\is-docker': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.is-docker-KNzHnfNn',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\is-docker': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.is-docker-Fg0wSoye',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\is-docker.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.is-docker.cmd-0Mmht9Ae',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\is-docker.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.is-docker.ps1-vsDaL7qY',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.semver-gdWH2jQS',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.bin\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.bin\\.semver-oUWuC7vI',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.bin\\.semver.cmd-fjfS9mJS',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\istanbul-lib-instrument\\node_modules\\.bin\\.semver.ps1-RL4E2RU7',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\json5': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.json5-7r2MS4as',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\json5': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.json5-cNnCygdq',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\json5.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.json5.cmd-hYVblJ33',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\json5.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.json5.ps1-8RXXVXaB',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\js-yaml': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.js-yaml-Fy4DjGmc',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\js-yaml': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.js-yaml-2hbtLiNP',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\js-yaml.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.js-yaml.cmd-im3jHKFQ',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\js-yaml.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.js-yaml.ps1-PgydkQ2K',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\jsesc': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.jsesc-c9RgoFJc',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\jsesc': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.jsesc-jJEtKHjf',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\jsesc.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.jsesc.cmd-xHXBvC2W',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\jsesc.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.jsesc.ps1-WWFTXmYV',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lan-network': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.lan-network-nkuT0WTw',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\lan-network': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.lan-network-T3GMV4kI',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\lan-network.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.lan-network.cmd-4xgAvyIN',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\lan-network.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.lan-network.ps1-8ouwtlRX',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\metro': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.metro-lKoUoaxb',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.metro-xiSX9tAv',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.metro.cmd-wjmFH734',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.metro.ps1-scNflMsG',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\loose-envify': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.loose-envify-3DOsU7sL',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\loose-envify': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.loose-envify-Zdop3J5k',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\loose-envify.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.loose-envify.cmd-kFMjBJVS',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\loose-envify.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.loose-envify.ps1-wKWIBbxL',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\mime': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.mime-ouOT9Rau',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mime': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.mime-OMbVYFKl',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mime.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.mime.cmd-CVK8I4Lg',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mime.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.mime.ps1-kHWQUrsJ',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\metro-symbolicate': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.metro-symbolicate-a9rNTZb8',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro-symbolicate': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.metro-symbolicate-SFSXKp4A',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro-symbolicate.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.metro-symbolicate.cmd-EDJvO6lY',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\metro-symbolicate.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.metro-symbolicate.ps1-NVrFFJQU',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\mkdirp': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.mkdirp-yi6dt5qb',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mkdirp': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.mkdirp-Xa6mBLuL',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mkdirp.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.mkdirp.cmd-gSTIGgwE',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\mkdirp.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.mkdirp.ps1-O6tNb8Ff',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\nanoid': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.nanoid-QiMBICHk',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\nanoid': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.nanoid-6udvkB48',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\nanoid.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.nanoid.cmd-6hf0XtKW',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\nanoid.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.nanoid.ps1-Zhj7XBDh',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\qrcode-terminal': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.qrcode-terminal-qf3Htx4a',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\qrcode-terminal': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.qrcode-terminal-dI9jXZr7',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\qrcode-terminal.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.qrcode-terminal.cmd-xL0twbsd',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\qrcode-terminal.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.qrcode-terminal.ps1-TFj4fWFi',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\react-native': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.react-native-3ADLSIxA',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\react-native': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.react-native-8uYErxGf',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\react-native.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.react-native.cmd-OUqZ8BCL',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\react-native.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.react-native.ps1-fECllfTD',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\rc': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.rc-oMQlj4XH',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rc': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.rc-yJVTrBaU',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rc.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.rc.cmd-jjw9vydI',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rc.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.rc.ps1-kGD9jv6Q',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\resolve': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.resolve-H0tK8K4C',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\resolve': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.resolve-71m8tDlz',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\resolve.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.resolve.cmd-DHemgeWh',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\resolve.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.resolve.ps1-YkafLjKG',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\regjsparser': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.regjsparser-m5f63PZM',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\regjsparser': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.regjsparser-MoIwPuGU',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\regjsparser.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.regjsparser.cmd-jllGU7cl',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\regjsparser.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.regjsparser.ps1-9qTs4Osh',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.semver-LaLKTYjg',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.semver-9eLUdqHO',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.semver.cmd-KLsardn6',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.semver.ps1-9LVEzFeD',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\rimraf': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.rimraf-X3thau4r',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rimraf': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.rimraf-iXtBjfgJ',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rimraf.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.rimraf.cmd-DFHQO1wt',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\rimraf.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.rimraf.ps1-bmixyDqb',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\sucrase': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.sucrase-hrXMxCAv',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.sucrase-okekLTpR',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.sucrase.cmd-9LUGOSMN',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.sucrase.ps1-qxZ8PRS5',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase-node': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.sucrase-node-xjjz9Paz',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase-node.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.sucrase-node.cmd-aOY5GxNa',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\sucrase-node.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.sucrase-node.ps1-egDq7snR',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\terser': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.terser-5gRfVlT4',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\terser': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.terser-oEsLwcEH',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\terser.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.terser.cmd-DnW0V7qB',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\terser.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.terser.ps1-HEgiwNFl',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\update-browserslist-db': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.update-browserslist-db-4plArjHb',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\update-browserslist-db': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.update-browserslist-db-6S0xiGnT',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\update-browserslist-db.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.update-browserslist-db.cmd-xe8WwINf',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\update-browserslist-db.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.update-browserslist-db.ps1-fgOy1Se2',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\uuid': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.uuid-Ae844xkd',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\uuid': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.uuid-7oZBrVMc',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\uuid.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.uuid.cmd-A9kJOKhG',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\uuid.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.uuid.ps1-qM7jtVXB',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\which': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.which-rOcNCMtk',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\node-which': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.node-which-PqgNqt9A',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\node-which.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.node-which.cmd-wzRoQgi6',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\node-which.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.node-which.ps1-wv8cZRWt',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\yaml': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.yaml-fBOOyAah',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\yaml': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.yaml-7wbyw56P',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\yaml.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.yaml.cmd-B0PV9Zqm',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\yaml.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.yaml.ps1-p3lAzEhW',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.semver-HkvguKRn',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.bin\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.bin\\.semver-8hSGTdmQ',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.bin\\.semver.cmd-J499Xosp',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\core\\node_modules\\.bin\\.semver.ps1-AwszZon0',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.semver-Wqgm88gg',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\.semver-IcN6RMF8',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\.semver.cmd-uVvf46Lk',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\.semver.ps1-oANFDvgp',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.semver-Vi4RTGjl',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\.semver-9U3JY17M',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\.semver.cmd-ElOQZ1Yk',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\.semver.ps1-V84TXAqb',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.semver-De4kP5Wh',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\.semver-34hipHGn',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\.semver.cmd-0oX81nvt',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\.semver.ps1-EGiHbLfq',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\parser': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\.parser-Pi8LzItz',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\parser': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.parser-Q2HD7QTD',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\parser.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.parser.cmd-H0mIfxje',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\parser.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.parser.ps1-EmRmMb8Q',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.semver-GnnS04rR',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.bin\\semver': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.bin\\.semver-itm6t9GN',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.bin\\.semver.cmd-0fp5PQg6',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@babel\\plugin-transform-runtime\\node_modules\\.bin\\.semver.ps1-vo92tUPg',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@expo\\fingerprint': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@expo\\.fingerprint-pwcyX0fx',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@expo\\xcpretty': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\@expo\\.xcpretty-70dx75TV',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\excpretty': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.excpretty-NlrBUqDa',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\excpretty.cmd': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.excpretty.cmd-VI8HjfT3',
+99 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\excpretty.ps1': 'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\.bin\\.excpretty.ps1-MvKkgo5d'
+99 silly reify }
+100 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-linux-x64-musl
+101 silly reify mark deleted [
+101 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-x64-musl'
+101 silly reify ]
+102 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-win32-arm64-msvc
+103 silly reify mark deleted [
+103 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-win32-arm64-msvc'
+103 silly reify ]
+104 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-linux-x64-gnu
+105 silly reify mark deleted [
+105 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-x64-gnu'
+105 silly reify ]
+106 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-linux-arm-gnueabihf
+107 silly reify mark deleted [
+107 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-arm-gnueabihf'
+107 silly reify ]
+108 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-linux-arm64-musl
+109 silly reify mark deleted [
+109 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-arm64-musl'
+109 silly reify ]
+110 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-linux-arm64-gnu
+111 silly reify mark deleted [
+111 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-linux-arm64-gnu'
+111 silly reify ]
+112 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-freebsd-x64
+113 silly reify mark deleted [
+113 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-freebsd-x64'
+113 silly reify ]
+114 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-darwin-x64
+115 silly reify mark deleted [
+115 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-darwin-x64'
+115 silly reify ]
+116 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-android-arm64
+117 silly reify mark deleted [
+117 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-android-arm64'
+117 silly reify ]
+118 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\lightningcss-darwin-arm64
+119 silly reify mark deleted [
+119 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\lightningcss-darwin-arm64'
+119 silly reify ]
+120 verbose reify failed optional dependency C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\node_modules\fsevents
+121 silly reify mark deleted [
+121 silly reify   'C:\\Users\\Helio Livramento\\Documents\\MOVYO\\analysis-projects\\movyo hub\\node_modules\\fsevents'
+121 silly reify ]
+122 http cache @babel/parser@https://registry.npmjs.org/@babel/parser/-/parser-7.28.5.tgz 0ms (cache hit)
+123 http cache @expo/xcpretty@https://registry.npmjs.org/@expo/xcpretty/-/xcpretty-4.3.2.tgz 0ms (cache hit)
+124 http cache @expo/fingerprint@https://registry.npmjs.org/@expo/fingerprint/-/fingerprint-0.15.4.tgz 0ms (cache hit)
+125 http cache yaml@https://registry.npmjs.org/yaml/-/yaml-2.8.2.tgz 0ms (cache hit)
+126 http cache which@https://registry.npmjs.org/which/-/which-2.0.2.tgz 0ms (cache hit)
+127 http cache uuid@https://registry.npmjs.org/uuid/-/uuid-7.0.3.tgz 0ms (cache hit)
+128 http cache update-browserslist-db@https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.2.3.tgz 0ms (cache hit)
+129 http cache terser@https://registry.npmjs.org/terser/-/terser-5.44.1.tgz 0ms (cache hit)
+130 http cache sucrase@https://registry.npmjs.org/sucrase/-/sucrase-3.35.1.tgz 0ms (cache hit)
+131 http cache rimraf@https://registry.npmjs.org/rimraf/-/rimraf-3.0.2.tgz 0ms (cache hit)
+132 http cache semver@https://registry.npmjs.org/semver/-/semver-7.7.3.tgz 0ms (cache hit)
+133 http cache regjsparser@https://registry.npmjs.org/regjsparser/-/regjsparser-0.13.0.tgz 0ms (cache hit)
+134 http cache resolve@https://registry.npmjs.org/resolve/-/resolve-1.22.11.tgz 0ms (cache hit)
+135 http cache react-native@https://registry.npmjs.org/react-native/-/react-native-0.81.5.tgz 0ms (cache hit)
+136 http cache qrcode-terminal@https://registry.npmjs.org/qrcode-terminal/-/qrcode-terminal-0.11.0.tgz 0ms (cache hit)
+137 http cache rc@https://registry.npmjs.org/rc/-/rc-1.2.8.tgz 0ms (cache hit)
+138 http cache nanoid@https://registry.npmjs.org/nanoid/-/nanoid-3.3.11.tgz 0ms (cache hit)
+139 http cache metro-symbolicate@https://registry.npmjs.org/metro-symbolicate/-/metro-symbolicate-0.83.3.tgz 0ms (cache hit)
+140 http cache mkdirp@https://registry.npmjs.org/mkdirp/-/mkdirp-1.0.4.tgz 0ms (cache hit)
+141 http cache metro@https://registry.npmjs.org/metro/-/metro-0.83.3.tgz 0ms (cache hit)
+142 http cache mime@https://registry.npmjs.org/mime/-/mime-1.6.0.tgz 0ms (cache hit)
+143 http cache loose-envify@https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz 0ms (cache hit)
+144 http cache jsesc@https://registry.npmjs.org/jsesc/-/jsesc-3.1.0.tgz 0ms (cache hit)
+145 http cache json5@https://registry.npmjs.org/json5/-/json5-2.2.3.tgz 0ms (cache hit)
+146 http cache js-yaml@https://registry.npmjs.org/js-yaml/-/js-yaml-3.14.2.tgz 0ms (cache hit)
+147 http cache is-docker@https://registry.npmjs.org/is-docker/-/is-docker-2.2.1.tgz 0ms (cache hit)
+148 http cache expo-updates@https://registry.npmjs.org/expo-updates/-/expo-updates-29.0.18.tgz 0ms (cache hit)
+149 http cache expo-modules-autolinking@https://registry.npmjs.org/expo-modules-autolinking/-/expo-modules-autolinking-3.0.23.tgz 0ms (cache hit)
+150 http cache image-size@https://registry.npmjs.org/image-size/-/image-size-1.2.1.tgz 0ms (cache hit)
+151 http cache esprima@https://registry.npmjs.org/esprima/-/esprima-4.0.1.tgz 0ms (cache hit)
+152 http cache chrome-launcher@https://registry.npmjs.org/chrome-launcher/-/chrome-launcher-0.15.2.tgz 0ms (cache hit)
+153 http cache expo@https://registry.npmjs.org/expo/-/expo-54.0.30.tgz 0ms (cache hit)
+154 http cache @react-native-community/netinfo@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@react-native-community/netinfo/-/netinfo-11.4.1.tgz 0ms (cache hit)
+155 http cache browserslist@https://registry.npmjs.org/browserslist/-/browserslist-4.28.1.tgz 0ms (cache hit)
+156 http cache acorn@https://registry.npmjs.org/acorn/-/acorn-8.15.0.tgz 0ms (cache hit)
+157 http cache ua-parser-js@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/ua-parser-js/-/ua-parser-js-1.0.41.tgz 0ms (cache hit)
+158 http cache baseline-browser-mapping@https://registry.npmjs.org/baseline-browser-mapping/-/baseline-browser-mapping-2.9.11.tgz 0ms (cache hit)
+159 http cache tr46@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/tr46/-/tr46-0.0.3.tgz 0ms (cache hit)
+160 http cache styleq@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/styleq/-/styleq-0.1.3.tgz 0ms (cache hit)
+161 http cache whatwg-url@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/whatwg-url/-/whatwg-url-5.0.0.tgz 0ms (cache hit)
+162 http cache react-native-web@https://registry.npmjs.org/react-native-web/-/react-native-web-0.21.0.tgz 0ms (cache hit)
+163 http cache setimmediate@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/setimmediate/-/setimmediate-1.0.5.tgz 0ms (cache hit)
+164 http cache lan-network@https://registry.npmjs.org/lan-network/-/lan-network-0.1.7.tgz 0ms (cache hit)
+165 http cache react-dom@https://registry.npmjs.org/react-dom/-/react-dom-19.1.0.tgz 0ms (cache hit)
+166 http cache postcss-value-parser@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz 0ms (cache hit)
+167 http cache inline-style-prefixer@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/inline-style-prefixer/-/inline-style-prefixer-7.0.1.tgz 0ms (cache hit)
+168 http cache node-fetch@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/node-fetch/-/node-fetch-2.7.0.tgz 0ms (cache hit)
+169 http cache hyphenate-style-name@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/hyphenate-style-name/-/hyphenate-style-name-1.1.0.tgz 0ms (cache hit)
+170 http cache fbjs-css-vars@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs-css-vars/-/fbjs-css-vars-1.0.2.tgz 0ms (cache hit)
+171 http cache css-in-js-utils@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/css-in-js-utils/-/css-in-js-utils-3.1.0.tgz 0ms (cache hit)
+172 http cache fbjs@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs/-/fbjs-3.0.5.tgz 0ms (cache hit)
+173 http cache cross-fetch@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/cross-fetch/-/cross-fetch-3.2.0.tgz 0ms (cache hit)
+174 http cache js-yaml@https://registry.npmjs.org/js-yaml/-/js-yaml-4.1.1.tgz 0ms (cache hit)
+175 http cache semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 0ms (cache hit)
+176 http cache semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 0ms (cache hit)
+177 http cache semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 0ms (cache hit)
+178 http cache semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 0ms (cache hit)
+179 http cache @expo/cli@https://registry.npmjs.org/@expo/cli/-/cli-54.0.20.tgz 0ms (cache hit)
+180 http cache semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 1ms (cache hit)
+181 http cache semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 0ms (cache hit)
+182 http cache webidl-conversions@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/webidl-conversions/-/webidl-conversions-3.0.1.tgz 0ms (cache hit)
+183 http cache @react-native/normalize-colors@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@react-native/normalize-colors/-/normalize-colors-0.74.89.tgz 0ms (cache hit)
+184 http cache semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 0ms (cache hit)
+185 silly tarball no local data for @babel/parser@https://registry.npmjs.org/@babel/parser/-/parser-7.28.5.tgz. Extracting by manifest.
+186 http cache memoize-one@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/memoize-one/-/memoize-one-6.0.0.tgz 0ms (cache hit)
+187 silly tarball no local data for @expo/xcpretty@https://registry.npmjs.org/@expo/xcpretty/-/xcpretty-4.3.2.tgz. Extracting by manifest.
+188 silly tarball no local data for @expo/fingerprint@https://registry.npmjs.org/@expo/fingerprint/-/fingerprint-0.15.4.tgz. Extracting by manifest.
+189 silly tarball no local data for yaml@https://registry.npmjs.org/yaml/-/yaml-2.8.2.tgz. Extracting by manifest.
+190 silly tarball no local data for which@https://registry.npmjs.org/which/-/which-2.0.2.tgz. Extracting by manifest.
+191 http cache promise@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/promise/-/promise-7.3.1.tgz 1ms (cache hit)
+192 silly tarball no local data for uuid@https://registry.npmjs.org/uuid/-/uuid-7.0.3.tgz. Extracting by manifest.
+193 silly tarball no local data for update-browserslist-db@https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.2.3.tgz. Extracting by manifest.
+194 silly tarball no local data for terser@https://registry.npmjs.org/terser/-/terser-5.44.1.tgz. Extracting by manifest.
+195 silly tarball no local data for sucrase@https://registry.npmjs.org/sucrase/-/sucrase-3.35.1.tgz. Extracting by manifest.
+196 silly tarball no local data for rimraf@https://registry.npmjs.org/rimraf/-/rimraf-3.0.2.tgz. Extracting by manifest.
+197 silly tarball no local data for semver@https://registry.npmjs.org/semver/-/semver-7.7.3.tgz. Extracting by manifest.
+198 silly tarball no local data for regjsparser@https://registry.npmjs.org/regjsparser/-/regjsparser-0.13.0.tgz. Extracting by manifest.
+199 silly tarball no local data for resolve@https://registry.npmjs.org/resolve/-/resolve-1.22.11.tgz. Extracting by manifest.
+200 silly tarball no local data for react-native@https://registry.npmjs.org/react-native/-/react-native-0.81.5.tgz. Extracting by manifest.
+201 silly tarball no local data for qrcode-terminal@https://registry.npmjs.org/qrcode-terminal/-/qrcode-terminal-0.11.0.tgz. Extracting by manifest.
+202 silly tarball no local data for rc@https://registry.npmjs.org/rc/-/rc-1.2.8.tgz. Extracting by manifest.
+203 silly tarball no local data for nanoid@https://registry.npmjs.org/nanoid/-/nanoid-3.3.11.tgz. Extracting by manifest.
+204 silly tarball no local data for metro-symbolicate@https://registry.npmjs.org/metro-symbolicate/-/metro-symbolicate-0.83.3.tgz. Extracting by manifest.
+205 silly tarball no local data for mkdirp@https://registry.npmjs.org/mkdirp/-/mkdirp-1.0.4.tgz. Extracting by manifest.
+206 silly tarball no local data for metro@https://registry.npmjs.org/metro/-/metro-0.83.3.tgz. Extracting by manifest.
+207 silly tarball no local data for mime@https://registry.npmjs.org/mime/-/mime-1.6.0.tgz. Extracting by manifest.
+208 silly tarball no local data for loose-envify@https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz. Extracting by manifest.
+209 silly tarball no local data for jsesc@https://registry.npmjs.org/jsesc/-/jsesc-3.1.0.tgz. Extracting by manifest.
+210 silly tarball no local data for json5@https://registry.npmjs.org/json5/-/json5-2.2.3.tgz. Extracting by manifest.
+211 silly tarball no local data for js-yaml@https://registry.npmjs.org/js-yaml/-/js-yaml-3.14.2.tgz. Extracting by manifest.
+212 silly tarball no local data for is-docker@https://registry.npmjs.org/is-docker/-/is-docker-2.2.1.tgz. Extracting by manifest.
+213 silly tarball no local data for expo-updates@https://registry.npmjs.org/expo-updates/-/expo-updates-29.0.18.tgz. Extracting by manifest.
+214 silly tarball no local data for expo-modules-autolinking@https://registry.npmjs.org/expo-modules-autolinking/-/expo-modules-autolinking-3.0.23.tgz. Extracting by manifest.
+215 silly tarball no local data for image-size@https://registry.npmjs.org/image-size/-/image-size-1.2.1.tgz. Extracting by manifest.
+216 silly tarball no local data for esprima@https://registry.npmjs.org/esprima/-/esprima-4.0.1.tgz. Extracting by manifest.
+217 silly tarball no local data for chrome-launcher@https://registry.npmjs.org/chrome-launcher/-/chrome-launcher-0.15.2.tgz. Extracting by manifest.
+218 silly tarball no local data for expo@https://registry.npmjs.org/expo/-/expo-54.0.30.tgz. Extracting by manifest.
+219 silly tarball no local data for @react-native-community/netinfo@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@react-native-community/netinfo/-/netinfo-11.4.1.tgz. Extracting by manifest.
+220 silly tarball no local data for browserslist@https://registry.npmjs.org/browserslist/-/browserslist-4.28.1.tgz. Extracting by manifest.
+221 silly tarball no local data for acorn@https://registry.npmjs.org/acorn/-/acorn-8.15.0.tgz. Extracting by manifest.
+222 silly tarball no local data for ua-parser-js@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/ua-parser-js/-/ua-parser-js-1.0.41.tgz. Extracting by manifest.
+223 silly tarball no local data for baseline-browser-mapping@https://registry.npmjs.org/baseline-browser-mapping/-/baseline-browser-mapping-2.9.11.tgz. Extracting by manifest.
+224 silly tarball no local data for tr46@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/tr46/-/tr46-0.0.3.tgz. Extracting by manifest.
+225 silly tarball no local data for styleq@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/styleq/-/styleq-0.1.3.tgz. Extracting by manifest.
+226 silly tarball no local data for whatwg-url@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/whatwg-url/-/whatwg-url-5.0.0.tgz. Extracting by manifest.
+227 silly tarball no local data for react-native-web@https://registry.npmjs.org/react-native-web/-/react-native-web-0.21.0.tgz. Extracting by manifest.
+228 silly tarball no local data for setimmediate@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/setimmediate/-/setimmediate-1.0.5.tgz. Extracting by manifest.
+229 silly tarball no local data for lan-network@https://registry.npmjs.org/lan-network/-/lan-network-0.1.7.tgz. Extracting by manifest.
+230 silly tarball no local data for react-dom@https://registry.npmjs.org/react-dom/-/react-dom-19.1.0.tgz. Extracting by manifest.
+231 silly tarball no local data for postcss-value-parser@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz. Extracting by manifest.
+232 silly tarball no local data for inline-style-prefixer@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/inline-style-prefixer/-/inline-style-prefixer-7.0.1.tgz. Extracting by manifest.
+233 silly tarball no local data for node-fetch@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/node-fetch/-/node-fetch-2.7.0.tgz. Extracting by manifest.
+234 silly tarball no local data for hyphenate-style-name@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/hyphenate-style-name/-/hyphenate-style-name-1.1.0.tgz. Extracting by manifest.
+235 silly tarball no local data for fbjs-css-vars@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs-css-vars/-/fbjs-css-vars-1.0.2.tgz. Extracting by manifest.
+236 silly tarball no local data for css-in-js-utils@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/css-in-js-utils/-/css-in-js-utils-3.1.0.tgz. Extracting by manifest.
+237 silly tarball no local data for fbjs@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs/-/fbjs-3.0.5.tgz. Extracting by manifest.
+238 silly tarball no local data for cross-fetch@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/cross-fetch/-/cross-fetch-3.2.0.tgz. Extracting by manifest.
+239 silly tarball no local data for js-yaml@https://registry.npmjs.org/js-yaml/-/js-yaml-4.1.1.tgz. Extracting by manifest.
+240 silly tarball no local data for semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz. Extracting by manifest.
+241 silly tarball no local data for semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz. Extracting by manifest.
+242 silly tarball no local data for semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz. Extracting by manifest.
+243 silly tarball no local data for semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz. Extracting by manifest.
+244 silly tarball no local data for @expo/cli@https://registry.npmjs.org/@expo/cli/-/cli-54.0.20.tgz. Extracting by manifest.
+245 silly tarball no local data for semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz. Extracting by manifest.
+246 silly tarball no local data for semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz. Extracting by manifest.
+247 silly tarball no local data for webidl-conversions@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/webidl-conversions/-/webidl-conversions-3.0.1.tgz. Extracting by manifest.
+248 silly tarball no local data for @react-native/normalize-colors@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@react-native/normalize-colors/-/normalize-colors-0.74.89.tgz. Extracting by manifest.
+249 silly tarball no local data for semver@https://registry.npmjs.org/semver/-/semver-6.3.1.tgz. Extracting by manifest.
+250 silly tarball no local data for memoize-one@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/memoize-one/-/memoize-one-6.0.0.tgz. Extracting by manifest.
+251 silly tarball no local data for promise@https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/promise/-/promise-7.3.1.tgz. Extracting by manifest.
+252 http fetch GET 200 https://registry.npmjs.org/rc/-/rc-1.2.8.tgz 676ms (cache miss)
+253 http fetch GET 200 https://registry.npmjs.org/nanoid/-/nanoid-3.3.11.tgz 699ms (cache miss)
+254 http fetch GET 200 https://registry.npmjs.org/mkdirp/-/mkdirp-1.0.4.tgz 1078ms (cache miss)
+255 http fetch GET 200 https://registry.npmjs.org/is-docker/-/is-docker-2.2.1.tgz 1290ms (cache miss)
+256 http fetch GET 200 https://registry.npmjs.org/mime/-/mime-1.6.0.tgz 1298ms (cache miss)
+257 http fetch GET 200 https://registry.npmjs.org/which/-/which-2.0.2.tgz 1340ms (cache miss)
+258 http fetch GET 200 https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.2.3.tgz 1537ms (cache miss)
+259 http fetch GET 200 https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz 1620ms (cache miss)
+260 http fetch GET 200 https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 1813ms (cache miss)
+261 http fetch GET 200 https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 1891ms (cache miss)
+262 http fetch GET 200 https://registry.npmjs.org/rimraf/-/rimraf-3.0.2.tgz 1954ms (cache miss)
+263 warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+264 http fetch GET 200 https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 1923ms (cache miss)
+265 http fetch GET 200 https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 1929ms (cache miss)
+266 http fetch GET 200 https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 1924ms (cache miss)
+267 http fetch GET 200 https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 1938ms (cache miss)
+268 http fetch GET 200 https://registry.npmjs.org/semver/-/semver-6.3.1.tgz 1942ms (cache miss)
+269 http fetch GET 200 https://registry.npmjs.org/regjsparser/-/regjsparser-0.13.0.tgz 2169ms (cache miss)
+270 http fetch GET 200 https://registry.npmjs.org/metro-symbolicate/-/metro-symbolicate-0.83.3.tgz 2165ms (cache miss)
+271 http fetch GET 200 https://registry.npmjs.org/jsesc/-/jsesc-3.1.0.tgz 2183ms (cache miss)
+272 http fetch GET 200 https://registry.npmjs.org/baseline-browser-mapping/-/baseline-browser-mapping-2.9.11.tgz 2334ms (cache miss)
+273 http fetch GET 200 https://registry.npmjs.org/browserslist/-/browserslist-4.28.1.tgz 2369ms (cache miss)
+274 http fetch GET 200 https://registry.npmjs.org/lan-network/-/lan-network-0.1.7.tgz 2434ms (cache miss)
+275 http fetch GET 200 https://registry.npmjs.org/esprima/-/esprima-4.0.1.tgz 2485ms (cache miss)
+276 http fetch GET 200 https://registry.npmjs.org/acorn/-/acorn-8.15.0.tgz 2560ms (cache miss)
+277 http fetch GET 200 https://registry.npmjs.org/json5/-/json5-2.2.3.tgz 2815ms (cache miss)
+278 http fetch GET 200 https://registry.npmjs.org/chrome-launcher/-/chrome-launcher-0.15.2.tgz 3120ms (cache miss)
+279 http fetch GET 200 https://registry.npmjs.org/@babel/parser/-/parser-7.28.5.tgz 3229ms (cache miss)
+280 http fetch GET 200 https://registry.npmjs.org/qrcode-terminal/-/qrcode-terminal-0.11.0.tgz 3217ms (cache miss)
+281 http fetch GET 200 https://registry.npmjs.org/@expo/xcpretty/-/xcpretty-4.3.2.tgz 3582ms (cache miss)
+282 http fetch GET 200 https://registry.npmjs.org/js-yaml/-/js-yaml-4.1.1.tgz 3564ms (cache miss)
+283 http fetch GET 200 https://registry.npmjs.org/js-yaml/-/js-yaml-3.14.2.tgz 3682ms (cache miss)
+284 http fetch GET 200 https://registry.npmjs.org/uuid/-/uuid-7.0.3.tgz 3754ms (cache miss)
+285 http fetch GET 200 https://registry.npmjs.org/image-size/-/image-size-1.2.1.tgz 3826ms (cache miss)
+286 http fetch GET 200 https://registry.npmjs.org/semver/-/semver-7.7.3.tgz 3868ms (cache miss)
+287 http fetch GET 200 https://registry.npmjs.org/terser/-/terser-5.44.1.tgz 4469ms (cache miss)
+288 http fetch GET 200 https://registry.npmjs.org/@expo/fingerprint/-/fingerprint-0.15.4.tgz 5215ms (cache miss)
+289 http fetch GET 200 https://registry.npmjs.org/resolve/-/resolve-1.22.11.tgz 5515ms (cache miss)
+290 http fetch GET 200 https://registry.npmjs.org/react-dom/-/react-dom-19.1.0.tgz 6215ms (cache miss)
+291 http fetch GET 200 https://registry.npmjs.org/sucrase/-/sucrase-3.35.1.tgz 7274ms (cache miss)
+292 http fetch GET 200 https://registry.npmjs.org/yaml/-/yaml-2.8.2.tgz 7663ms (cache miss)
+293 http fetch GET 200 https://registry.npmjs.org/expo-modules-autolinking/-/expo-modules-autolinking-3.0.23.tgz 7734ms (cache miss)
+294 http fetch GET 200 https://registry.npmjs.org/metro/-/metro-0.83.3.tgz 8417ms (cache miss)
+295 http fetch GET 200 https://registry.npmjs.org/expo/-/expo-54.0.30.tgz 8687ms (cache miss)
+296 http fetch GET 200 https://registry.npmjs.org/expo-updates/-/expo-updates-29.0.18.tgz 11113ms (cache miss)
+297 http fetch GET 200 https://registry.npmjs.org/@expo/cli/-/cli-54.0.20.tgz 14291ms (cache miss)
+298 http fetch GET 200 https://registry.npmjs.org/react-native-web/-/react-native-web-0.21.0.tgz 15161ms (cache miss)
+299 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@react-native-community/netinfo/-/netinfo-11.4.1.tgz attempt 1 failed with ETIMEDOUT
+300 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/styleq/-/styleq-0.1.3.tgz attempt 1 failed with ETIMEDOUT
+301 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/whatwg-url/-/whatwg-url-5.0.0.tgz attempt 1 failed with ETIMEDOUT
+302 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/ua-parser-js/-/ua-parser-js-1.0.41.tgz attempt 1 failed with ETIMEDOUT
+303 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/setimmediate/-/setimmediate-1.0.5.tgz attempt 1 failed with ETIMEDOUT
+304 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/tr46/-/tr46-0.0.3.tgz attempt 1 failed with ETIMEDOUT
+305 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz attempt 1 failed with ETIMEDOUT
+306 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/inline-style-prefixer/-/inline-style-prefixer-7.0.1.tgz attempt 1 failed with ETIMEDOUT
+307 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/node-fetch/-/node-fetch-2.7.0.tgz attempt 1 failed with ETIMEDOUT
+308 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/hyphenate-style-name/-/hyphenate-style-name-1.1.0.tgz attempt 1 failed with ETIMEDOUT
+309 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs-css-vars/-/fbjs-css-vars-1.0.2.tgz attempt 1 failed with ETIMEDOUT
+310 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/css-in-js-utils/-/css-in-js-utils-3.1.0.tgz attempt 1 failed with ETIMEDOUT
+311 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs/-/fbjs-3.0.5.tgz attempt 1 failed with ETIMEDOUT
+312 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/cross-fetch/-/cross-fetch-3.2.0.tgz attempt 1 failed with ETIMEDOUT
+313 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/webidl-conversions/-/webidl-conversions-3.0.1.tgz attempt 1 failed with ETIMEDOUT
+314 http fetch GET 200 https://registry.npmjs.org/react-native/-/react-native-0.81.5.tgz 34377ms (cache miss)
+315 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@react-native-community/netinfo/-/netinfo-11.4.1.tgz attempt 2 failed with ETIMEDOUT
+316 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/styleq/-/styleq-0.1.3.tgz attempt 2 failed with ETIMEDOUT
+317 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/whatwg-url/-/whatwg-url-5.0.0.tgz attempt 2 failed with ETIMEDOUT
+318 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/ua-parser-js/-/ua-parser-js-1.0.41.tgz attempt 2 failed with ETIMEDOUT
+319 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/setimmediate/-/setimmediate-1.0.5.tgz attempt 2 failed with ETIMEDOUT
+320 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/tr46/-/tr46-0.0.3.tgz attempt 2 failed with ETIMEDOUT
+321 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz attempt 2 failed with ETIMEDOUT
+322 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/inline-style-prefixer/-/inline-style-prefixer-7.0.1.tgz attempt 2 failed with ETIMEDOUT
+323 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/node-fetch/-/node-fetch-2.7.0.tgz attempt 2 failed with ETIMEDOUT
+324 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/hyphenate-style-name/-/hyphenate-style-name-1.1.0.tgz attempt 2 failed with ETIMEDOUT
+325 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs-css-vars/-/fbjs-css-vars-1.0.2.tgz attempt 2 failed with ETIMEDOUT
+326 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/css-in-js-utils/-/css-in-js-utils-3.1.0.tgz attempt 2 failed with ETIMEDOUT
+327 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs/-/fbjs-3.0.5.tgz attempt 2 failed with ETIMEDOUT
+328 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/cross-fetch/-/cross-fetch-3.2.0.tgz attempt 2 failed with ETIMEDOUT
+329 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/webidl-conversions/-/webidl-conversions-3.0.1.tgz attempt 2 failed with ETIMEDOUT
+330 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@react-native-community/netinfo/-/netinfo-11.4.1.tgz attempt 3 failed with ETIMEDOUT
+331 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/styleq/-/styleq-0.1.3.tgz attempt 3 failed with ETIMEDOUT
+332 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/whatwg-url/-/whatwg-url-5.0.0.tgz attempt 3 failed with ETIMEDOUT
+333 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/ua-parser-js/-/ua-parser-js-1.0.41.tgz attempt 3 failed with ETIMEDOUT
+334 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/setimmediate/-/setimmediate-1.0.5.tgz attempt 3 failed with ETIMEDOUT
+335 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/tr46/-/tr46-0.0.3.tgz attempt 3 failed with ETIMEDOUT
+336 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz attempt 3 failed with ETIMEDOUT
+337 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/inline-style-prefixer/-/inline-style-prefixer-7.0.1.tgz attempt 3 failed with ETIMEDOUT
+338 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/node-fetch/-/node-fetch-2.7.0.tgz attempt 3 failed with ETIMEDOUT
+339 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/hyphenate-style-name/-/hyphenate-style-name-1.1.0.tgz attempt 3 failed with ETIMEDOUT
+340 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs-css-vars/-/fbjs-css-vars-1.0.2.tgz attempt 3 failed with ETIMEDOUT
+341 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/css-in-js-utils/-/css-in-js-utils-3.1.0.tgz attempt 3 failed with ETIMEDOUT
+342 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/fbjs/-/fbjs-3.0.5.tgz attempt 3 failed with ETIMEDOUT
+343 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/cross-fetch/-/cross-fetch-3.2.0.tgz attempt 3 failed with ETIMEDOUT
+344 http fetch GET https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/webidl-conversions/-/webidl-conversions-3.0.1.tgz attempt 3 failed with ETIMEDOUT
+345 verbose cwd C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub
+346 verbose os Windows_NT 10.0.26200
+347 verbose node v24.1.0
+348 verbose npm  v11.3.0
+349 notice
+349 notice New minor version of npm available! 11.3.0 -> 11.17.0
+349 notice Changelog: https://github.com/npm/cli/releases/tag/v11.17.0
+349 notice To update run: npm install -g npm@11.17.0
+349 notice  { force: true, Symbol(proc-log.meta): true }
+350 error Exit handler never called!
+351 error This is an error with npm itself. Please report this error at:
+352 error   <https://github.com/npm/cli/issues>
+353 verbose exit 1
+354 verbose code 1
+355 error A complete log of this run can be found in: C:\Users\Helio Livramento\Documents\MOVYO\analysis-projects\movyo hub\.npm-cache\_logs\2026-06-26T16_29_04_569Z-debug-0.log

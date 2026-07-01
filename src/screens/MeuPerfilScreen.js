@@ -167,7 +167,6 @@ export default function MeuPerfilScreen({ navigation, onLogout }) {
           { key: "verPedidos", label: "Ver pedidos" },
           { key: "adicionarItem", label: "Adicionar item" },
           { key: "cancelarPedido", label: "Cancelar pedido" },
-          { key: "cancelarSemPinGerente", label: "Cancelar sem PIN do gerente" },
         ],
       },
       {

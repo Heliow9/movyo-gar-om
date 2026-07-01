@@ -92,21 +92,6 @@ const countMesasAbertas = (mesas = []) => {
 };
 
 
-const toMoneyNumber = (value) => {
-  if (value == null || value === "") return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
-    const cleaned = value.replace(/R\$\s?/gi, "").replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
-};
-const sumMoneyValues = (items, picker) => {
-  if (!Array.isArray(items)) return null;
-  const total = items.reduce((acc, item) => acc + (toMoneyNumber(picker(item)) || 0), 0);
-  return total > 0 ? total : null;
-};
 const norm = (v) => String(v || "").trim().toLowerCase();
 const pickPlano = (session) => norm(session?.restaurante?.plano || session?.restaurante?.planoCodigo || session?.restaurante?.assinatura?.plano || session?.restaurante?.licenca?.plano);
 const isStarterMobilePlan = (session) => ["starter-mobile", "start-mobile", "starter_mobile", "start_mobile"].includes(pickPlano(session));
@@ -122,17 +107,7 @@ const isPedidoAReceber = (pedido) => isOrigemVitrine(pedido) && isStatusAReceber
 const pickPedidoId = (p) => p?._id || p?.id || p?.pedidoId;
 const pickPedidoNumero = (p) => p?.numeroPedido || p?.numero_pedido || p?.pedidoNumero || p?.codigoPedido || p?.numero || p?.codigo || String(pickPedidoId(p) || "").slice(-6);
 const pickPedidoCliente = (p) => p?.nomeCliente || p?.cliente?.nome || p?.clienteNome || p?.mesaCliente || p?.cliente || "Cliente";
-const pickPedidoTotal = (p = {}) => {
-  const itensTotal = sumMoneyValues(p?.itens || p?.items, (it) => {
-    const qtd = toMoneyNumber(it?.quantidade ?? it?.qtd ?? it?.quantity ?? 1) || 1;
-    return it?.precoTotal ?? it?.subtotal ?? it?.total ?? it?.valorTotal ?? (toMoneyNumber(it?.precoUnitario ?? it?.preco ?? it?.valor) || 0) * qtd;
-  });
-  const pagamentosTotal = sumMoneyValues(p?.pagamentos, (pg) => pg?.valor ?? pg?.total ?? pg?.valorPago);
-  const candidatos = [p?.total, p?.valorTotal, p?.totalPedido, p?.valor, p?.subtotal, p?.totalBruto, p?.valorPago, p?.valorRecebido, p?.totalPago, pagamentosTotal, itensTotal]
-    .map(toMoneyNumber)
-    .filter((n) => n != null);
-  return candidatos.find((n) => n > 0) ?? candidatos[0] ?? 0;
-};
+const pickPedidoTotal = (p) => p?.total ?? p?.valorTotal ?? p?.valor ?? p?.subtotal ?? "";
 const normalizePedidoStatusForNotification = (p = {}) =>
   String(p?.status || p?.statusPedido || p?.pedido?.status || "")
     .trim()
@@ -204,8 +179,10 @@ export default function HomeScreen({ navigation, onLogout }) {
     const emProducao = tipo === "em_producao" || isPedidoEmProducao(pedido);
     const mensagem = `${numero ? `Pedido #${numero}` : "Pedido"} de ${cliente}${total ? ` • ${moneyBRL(total)}` : ""}`;
 
-    const notified = await alertNovoPedido({ ...pedido, codigo: numero, cliente, total }, { emProducao }).catch(() => false);
-    if (notified) return;
+    if (Platform.OS === "web") {
+      try { await alertNovoPedido({ ...pedido, codigo: numero, cliente, total }, { emProducao }); } catch (_) {}
+      return;
+    }
 
     try { Vibration.vibrate([220, 90, 220]); } catch (_) {}
     Alert.alert(emProducao ? "🍳 Pedido em produção" : "📥 Novo pedido", mensagem);
@@ -372,14 +349,14 @@ export default function HomeScreen({ navigation, onLogout }) {
         if (isPedidoEmProducao(pedido)) notifyPedidoRecebido(pedido, "em_producao");
         schedule();
       };
-      handleCaixaAberto = async (payload = {}) => {
-        const notified = await alertCaixaAberto(payload?.caixa || payload).catch(() => false);
-        if (!notified) Alert.alert("Caixa aberto", "O caixa do restaurante foi aberto.");
+      handleCaixaAberto = (payload = {}) => {
+        if (Platform.OS === "web") alertCaixaAberto(payload?.caixa || payload).catch(() => {});
+        else Alert.alert("Caixa aberto", "O caixa do restaurante foi aberto.");
         schedule();
       };
-      handleCaixaFechado = async (payload = {}) => {
-        const notified = await alertCaixaFechado(payload?.caixa || payload).catch(() => false);
-        if (!notified) Alert.alert("Caixa fechado", "O caixa do restaurante foi fechado.");
+      handleCaixaFechado = (payload = {}) => {
+        if (Platform.OS === "web") alertCaixaFechado(payload?.caixa || payload).catch(() => {});
+        else Alert.alert("Caixa fechado", "O caixa do restaurante foi fechado.");
         schedule();
       };
       eventosAtualizacao.forEach((ev) => socket.on(ev, schedule));

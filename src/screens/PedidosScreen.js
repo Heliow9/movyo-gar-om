@@ -10,8 +10,8 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
-  Modal,
   Animated,
+  Modal,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -25,8 +25,14 @@ import { getSession } from "../api/storage/session";
 import { connectSocket, getSocket } from "../socket/socket";
 import { useAppTheme } from "../theme/ThemeProvider";
 import { cachedApiGet } from "../utils/smartCache";
+const {
+  isCanceledOrder,
+  pickPedidoItems,
+  pickPedidoTotal,
+  toMoneyNumber,
+} = require("../utils/pedidoTotals");
 
-const PEDIDOS_CACHE_KEY = "garcom:pedidos:list:v3:hoje";
+const PEDIDOS_CACHE_KEY = "garcom:pedidos:list:v4:totais";
 
 const STATUS_LABELS = {
   pendente: "Pendente",
@@ -60,35 +66,8 @@ const STATUS_ORDER = [
 ];
 
 const money = (v) => {
-  const n = Number(v || 0);
-  if (!Number.isFinite(n)) return "R$ 0,00";
+  const n = toMoneyNumber(v);
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-};
-
-
-const toMoneyNumber = (value) => {
-  if (value == null || value === "") return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
-    const cleaned = value
-      .replace(/R\$\s?/gi, "")
-      .replace(/\s/g, "")
-      .replace(/\.(?=\d{3}(\D|$))/g, "")
-      .replace(",", ".");
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
-};
-
-const sumValues = (items, picker) => {
-  if (!Array.isArray(items)) return null;
-  const total = items.reduce((acc, item) => {
-    const picked = picker(item);
-    const n = toMoneyNumber(picked);
-    return acc + (n || 0);
-  }, 0);
-  return total > 0 ? total : null;
 };
 
 const safeText = (v) => {
@@ -146,43 +125,9 @@ const pickCliente = (p) =>
   safeText(p?.nomeCliente || p?.cliente?.nome || p?.clienteNome || p?.mesaCliente || p?.cliente) ||
   (p?.mesaNumero ? `Mesa ${p.mesaNumero}` : "Cliente");
 const pickNumero = (p) => p?.numeroPedido || p?.numero_pedido || p?.pedidoNumero || p?.codigoPedido || p?.numero || p?.codigo || p?._id?.slice?.(-6) || "—";
-const pickTotal = (p = {}) => {
-  const itensTotal = sumValues(p?.itens || p?.items, (it) => {
-    const qtd = toMoneyNumber(it?.quantidade ?? it?.qtd ?? it?.quantity ?? 1) || 1;
-    return it?.precoTotal ?? it?.subtotal ?? it?.total ?? it?.valorTotal ?? (toMoneyNumber(it?.precoUnitario ?? it?.preco ?? it?.valor) || 0) * qtd;
-  });
-  const pagamentosTotal = sumValues(p?.pagamentos, (pg) => pg?.valor ?? pg?.total ?? pg?.valorPago);
-  const snapshot = p?.pedidoOriginalSnapshot || {};
-  const candidatos = [
-    p?.total,
-    p?.valorTotal,
-    p?.totalPedido,
-    p?.valor,
-    p?.subtotal,
-    p?.totalBruto,
-    p?.valorPago,
-    p?.valorRecebido,
-    p?.totalPago,
-    pagamentosTotal,
-    itensTotal,
-    snapshot?.valorTotal,
-    snapshot?.total,
-    p?.valorCancelado,
-  ].map(toMoneyNumber).filter((n) => n != null);
-  const positivo = candidatos.find((n) => n > 0);
-  return positivo ?? candidatos[0] ?? 0;
-};
+const pickTotal = (p) => pickPedidoTotal(p);
 const pickPagamento = (p) => safeText(p?.formaPagamento || p?.formadePagamento || p?.metodoPagamento || p?.pagamento?.metodo || p?.pagamento || p?.pagamentos?.[0]?.metodo || "Não informado");
-const pickItens = (p) => {
-  const ativos = Array.isArray(p?.itens) ? p.itens : Array.isArray(p?.items) ? p.items : [];
-  const cancelados = (Array.isArray(p?.itensCancelados) ? p.itensCancelados : [])
-    .map((registro) => ({ ...(registro?.item || registro), _cancelado: true, _cancelamento: registro }));
-  const snapshot = Array.isArray(p?.pedidoOriginalSnapshot?.itens)
-    ? p.pedidoOriginalSnapshot.itens.map((item) => ({ ...item, _cancelado: true }))
-    : [];
-  if (ativos.length || cancelados.length) return [...ativos, ...cancelados];
-  return snapshot;
-};
+const pickItens = (p) => pickPedidoItems(p);
 const hasConfirmedPayment = (p) =>
   Number(p?.valorPago || 0) > 0 ||
   normalizeStatus(p?.statusPagamento || p?.pagamento?.status) === "pago" ||
@@ -218,7 +163,7 @@ export default function PedidosScreen({ navigation, route }) {
   const [isOnline, setIsOnline] = useState(true);
   const [fromCache, setFromCache] = useState(false);
   const [canCancelOrders, setCanCancelOrders] = useState(false);
-  const [requiresManagerPin, setRequiresManagerPin] = useState(true);
+  const [cancelRequiresManagerPin, setCancelRequiresManagerPin] = useState(true);
   const [cancelDialog, setCancelDialog] = useState({
     open: false,
     type: "pedido",
@@ -239,12 +184,15 @@ export default function PedidosScreen({ navigation, route }) {
         session?.garcom?.permissoes?.cancelarPedido === true ||
         session?.garcom?.permissoes?.cancelarPedido === "true";
       setCanCancelOrders(allowed);
-      const semPin = session?.tipo === "restaurante" ||
+      const canCancelWithoutManagerPin = session?.tipo === "restaurante" ||
         session?.garcom?.permissoes?.cancelarSemPinGerente === true ||
         session?.garcom?.permissoes?.cancelarSemPinGerente === "true";
-      setRequiresManagerPin(!semPin);
+      setCancelRequiresManagerPin(!canCancelWithoutManagerPin);
     }).catch(() => {
-      if (active) setCanCancelOrders(false);
+      if (active) {
+        setCanCancelOrders(false);
+        setCancelRequiresManagerPin(true);
+      }
     });
     return () => { active = false; };
   }, []);
@@ -352,7 +300,7 @@ export default function PedidosScreen({ navigation, route }) {
   const stats = useMemo(() => {
     const ativos = pedidos.filter((p) => !["cancelado", "entregue", "finalizado"].includes(normalizeStatus(p?.status))).length;
     const producao = pedidos.filter((p) => ["em_producao", "producao", "preparando", "em_preparo"].includes(normalizeStatus(p?.status))).length;
-    const totalListado = pedidos.reduce((acc, p) => acc + Number(pickTotal(p) || 0), 0);
+    const totalListado = pedidos.reduce((acc, p) => acc + toMoneyNumber(pickTotal(p)), 0);
     return { ativos, producao, totalListado };
   }, [pedidos]);
 
@@ -401,62 +349,84 @@ export default function PedidosScreen({ navigation, route }) {
   const cancelarPedido = (pedido) => {
     const id = pickPedidoId(pedido);
     if (!id) return;
-    setCancelDialog({ open: true, type: "pedido", pedido, itemIndex: null, item: null, motivo: "", pinGerente: "" });
+    setCancelDialog({
+      open: true,
+      type: "pedido",
+      pedido,
+      itemIndex: null,
+      item: null,
+      motivo: "",
+      pinGerente: "",
+    });
   };
 
   const cancelarItem = (pedido, index, it) => {
     const id = pickPedidoId(pedido);
     if (!id) return;
-    setCancelDialog({ open: true, type: "item", pedido, itemIndex: index, item: it, motivo: "", pinGerente: "" });
+    setCancelDialog({
+      open: true,
+      type: "item",
+      pedido,
+      itemIndex: index,
+      item: it,
+      motivo: "",
+      pinGerente: "",
+    });
+  };
+
+  const fecharCancelamento = () => {
+    if (busyId) return;
+    setCancelDialog((current) => ({ ...current, open: false }));
   };
 
   const confirmarCancelamento = async () => {
     const pedido = cancelDialog.pedido;
     const id = pickPedidoId(pedido);
     if (!id) return;
-    if (requiresManagerPin && !String(cancelDialog.pinGerente || "").trim()) {
-      return Alert.alert("PIN obrigatorio", "Informe o PIN do operador que abriu o caixa.");
+
+    const pinGerente = String(cancelDialog.pinGerente || "").trim();
+    if (cancelRequiresManagerPin && !pinGerente) {
+      Alert.alert("PIN obrigatório", "Informe o PIN do operador que abriu o caixa.");
+      return;
     }
 
-    const busyKey = cancelDialog.type === "item" ? `${id}_${cancelDialog.itemIndex}` : id;
+    const isItem = cancelDialog.type === "item";
+    const busyKey = isItem ? `${id}_${cancelDialog.itemIndex}` : id;
+
     try {
       setBusyId(busyKey);
-      const body = {
+      const payload = {
         motivo: String(cancelDialog.motivo || "").trim() || "Cancelado pelo app Movyo Hub.",
-        tipoCancelamento: cancelDialog.type === "item" ? "cancelamento_item" : "manual",
-        pinGerente: String(cancelDialog.pinGerente || "").trim(),
+        tipoCancelamento: isItem ? "cancelamento_item" : "manual",
+        pinGerente,
       };
-      const response = cancelDialog.type === "item"
-        ? await api.post(`/api/garcons/app/pedido/${id}/item/${cancelDialog.itemIndex}/cancelar`, body)
-        : await api.post(`/api/garcons/app/pedido/${id}/cancelar`, body);
-      setCancelDialog((prev) => ({ ...prev, open: false }));
+      const response = isItem
+        ? await api.post(`/api/garcons/app/pedido/${id}/item/${cancelDialog.itemIndex}/cancelar`, payload)
+        : await api.post(`/api/garcons/app/pedido/${id}/cancelar`, payload);
+
+      setCancelDialog((current) => ({ ...current, open: false }));
       await fetchPedidos();
 
       const estorno = response?.data?.estorno || {};
-      const viaPix = estorno.meio === "pix";
-      if (estorno.status === "erro" || estorno.status === "manual") {
+      const isPixRefund = normalizeStatus(estorno?.meio) === "pix";
+      if (["erro", "manual"].includes(normalizeStatus(estorno?.status))) {
         Alert.alert(
-          viaPix ? "Falha no estorno via PIX" : "Cancelamento exige atencao",
-          estorno.erro || estorno.mensagem || "Verifique o cancelamento no Mercado Pago."
+          isPixRefund ? "Falha no estorno via PIX" : "Cancelamento exige atenção",
+          estorno?.erro || estorno?.mensagem || "Verifique o cancelamento no Mercado Pago."
         );
-      } else if (estorno.status === "concluido") {
+      } else if (normalizeStatus(estorno?.status) === "concluido") {
         Alert.alert(
-          viaPix ? "Estorno via PIX concluido" : "Estorno concluido",
-          `${estorno.mensagem || "Cancelamento concluido com sucesso"} Valor: ${money(estorno.valor || 0)}.`
+          isPixRefund ? "Estorno via PIX concluído" : "Estorno concluído",
+          `${estorno?.mensagem || "Cancelamento concluído com sucesso."} Valor: ${money(estorno?.valor || 0)}.`
         );
       } else {
-        Alert.alert(
-          cancelDialog.type === "item" ? "Item cancelado" : "Pedido cancelado",
-          estorno.mensagem || "Cancelamento concluido com sucesso."
-        );
+        Alert.alert(isItem ? "Item cancelado" : "Pedido cancelado", "Cancelamento concluído.");
       }
     } catch (err) {
-      const code = err?.response?.data?.code;
-      if (code === "PIN_GERENTE_NECESSARIO" || code === "PIN_GERENTE_INVALIDO") {
-        setRequiresManagerPin(true);
-      }
-      const msg = err?.response?.data?.message || err?.response?.data?.mensagem || "Nao foi possivel cancelar.";
-      Alert.alert("Cancelamento nao autorizado", msg);
+      const msg = err?.response?.data?.message ||
+        err?.response?.data?.mensagem ||
+        (isItem ? "Não foi possível cancelar o item." : "Não foi possível cancelar o pedido.");
+      Alert.alert("Ops", msg);
     } finally {
       setBusyId(null);
     }
@@ -466,15 +436,16 @@ export default function PedidosScreen({ navigation, route }) {
     const id = pickPedidoId(pedido);
     const itens = pickItens(pedido);
     const st = normalizeStatus(pedido?.status);
+    const isCanceled = isCanceledOrder(pedido);
     const canCancel = canCancelOrders &&
       !["cancelado", "cancelada", "canceled", "cancelled", "entregue", "finalizado", "finalizada", "concluido", "concluida"].includes(st);
-    const canCancelItem = canCancel;
+    const canCancelItem = canCancel && !hasConfirmedPayment(pedido);
 
     return (
-      <View key={id || `${pickNumero(pedido)}_${pickCriadoEm(pedido)}`} style={[styles.card, st === "cancelado" && styles.cardCanceled]}>
+      <View key={id || `${pickNumero(pedido)}_${pickCriadoEm(pedido)}`} style={[styles.card, isCanceled && styles.cardCanceled]}>
         <View style={styles.cardTop}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[styles.orderTitle, st === "cancelado" && styles.orderTitleCanceled]} numberOfLines={1}>Pedido #{pickNumero(pedido)}</Text>
+            <Text style={[styles.orderTitle, isCanceled && styles.orderTitleCanceled]} numberOfLines={1}>Pedido #{pickNumero(pedido)}</Text>
             <Text style={styles.orderSub} numberOfLines={1}>{pickCliente(pedido)} • {fmtDate(pickCriadoEm(pedido))}</Text>
           </View>
           <View style={[styles.statusPill, st === "cancelado" && styles.statusCancelado]}>
@@ -482,13 +453,13 @@ export default function PedidosScreen({ navigation, route }) {
           </View>
         </View>
 
-        {st === "cancelado" && (
+        {isCanceled && (
           <View style={styles.canceledBanner}>
             <Ionicons name="ban-outline" size={16} color="#b91c1c" />
             <Text style={styles.canceledBannerText}>
               Pedido cancelado
-              {pedido?.estornoStatus === "concluido"
-                ? " • estorno concluido"
+              {normalizeStatus(pedido?.estornoStatus) === "concluido"
+                ? " • estorno concluído"
                 : ["erro", "manual"].includes(normalizeStatus(pedido?.estornoStatus))
                   ? " • estorno pendente"
                   : ""}
@@ -505,7 +476,9 @@ export default function PedidosScreen({ navigation, route }) {
 
         <View style={styles.itemsBox}>
           {itens.length ? itens.map((it, idx) => {
-            const itemCanceled = it?._cancelado === true || normalizeStatus(it?.status || it?.cozinha?.status) === "cancelado" || it?.cancelado === true;
+            const itemCanceled = it?._cancelado === true ||
+              normalizeStatus(it?.status || it?.cozinha?.status) === "cancelado" ||
+              it?.cancelado === true;
             return (
               <View key={`${id}_${idx}`} style={styles.itemRow}>
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -641,32 +614,39 @@ export default function PedidosScreen({ navigation, route }) {
         visible={cancelDialog.open}
         transparent
         animationType="fade"
-        onRequestClose={() => setCancelDialog((prev) => ({ ...prev, open: false }))}
+        onRequestClose={fecharCancelamento}
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.cancelModal}>
-            <View style={styles.cancelModalIcon}><Ionicons name="ban-outline" size={24} color="#b91c1c" /></View>
+            <View style={styles.cancelModalIcon}>
+              <Ionicons name="ban-outline" size={24} color="#b91c1c" />
+            </View>
             <Text style={styles.cancelModalTitle}>
-              {cancelDialog.type === "item" ? "Cancelar item" : `Cancelar pedido #${pickNumero(cancelDialog.pedido)}`}
+              {cancelDialog.type === "item"
+                ? "Cancelar item"
+                : `Cancelar pedido #${pickNumero(cancelDialog.pedido)}`}
             </Text>
             <Text style={styles.cancelModalSub}>
               {cancelDialog.type === "item"
                 ? `${itemQty(cancelDialog.item)}x ${itemName(cancelDialog.item)}`
-                : "O pedido permanecera no historico com destaque de cancelado."}
+                : "O pedido permanecerá no histórico com destaque de cancelado."}
             </Text>
             <TextInput
               value={cancelDialog.motivo}
-              onChangeText={(motivo) => setCancelDialog((prev) => ({ ...prev, motivo }))}
+              onChangeText={(motivo) => setCancelDialog((current) => ({ ...current, motivo }))}
               placeholder="Motivo do cancelamento"
               placeholderTextColor="#94a3b8"
               style={styles.cancelModalInput}
             />
-            {requiresManagerPin && (
+            {cancelRequiresManagerPin && (
               <>
                 <Text style={styles.pinHint}>PIN do operador que abriu o caixa</Text>
                 <TextInput
                   value={cancelDialog.pinGerente}
-                  onChangeText={(pinGerente) => setCancelDialog((prev) => ({ ...prev, pinGerente: pinGerente.replace(/\D/g, "").slice(0, 8) }))}
+                  onChangeText={(pinGerente) => setCancelDialog((current) => ({
+                    ...current,
+                    pinGerente: pinGerente.replace(/\D/g, "").slice(0, 8),
+                  }))}
                   placeholder="PIN do gerente"
                   placeholderTextColor="#94a3b8"
                   keyboardType="number-pad"
@@ -676,11 +656,13 @@ export default function PedidosScreen({ navigation, route }) {
               </>
             )}
             <View style={styles.cancelModalActions}>
-              <Pressable onPress={() => setCancelDialog((prev) => ({ ...prev, open: false }))} style={styles.cancelModalBack}>
+              <Pressable onPress={fecharCancelamento} disabled={!!busyId} style={styles.cancelModalBack}>
                 <Text style={styles.cancelModalBackText}>Voltar</Text>
               </Pressable>
               <Pressable onPress={confirmarCancelamento} disabled={!!busyId} style={styles.cancelModalConfirm}>
-                {busyId ? <ActivityIndicator color="#fff" /> : <Ionicons name="checkmark" size={18} color="#fff" />}
+                {busyId
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Ionicons name="trash-outline" size={16} color="#fff" />}
                 <Text style={styles.cancelModalConfirmText}>Confirmar</Text>
               </Pressable>
             </View>

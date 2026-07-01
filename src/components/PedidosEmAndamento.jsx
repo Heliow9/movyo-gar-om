@@ -27,22 +27,6 @@ import { usePedidos } from "../Context/PedidosContext";
 import { io } from "socket.io-client";
 import { alertNovoPedido } from "../utils/pwaNotifications";
 
-
-const toMoneyNumberPedido = (pedido = {}) => {
-  const toNum = (value) => {
-    if (value == null || value === "") return null;
-    if (typeof value === "number") return Number.isFinite(value) ? value : null;
-    const cleaned = String(value).replace(/R\$\s?/gi, "").replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : null;
-  };
-  const pagamentos = Array.isArray(pedido?.pagamentos) ? pedido.pagamentos.reduce((acc, pg) => acc + (toNum(pg?.valor ?? pg?.total ?? pg?.valorPago) || 0), 0) : null;
-  const candidatos = [pedido?.valorTotal, pedido?.total, pedido?.totalPedido, pedido?.valor, pedido?.subtotal, pedido?.totalBruto, pedido?.valorPago, pedido?.valorRecebido, pagamentos]
-    .map(toNum)
-    .filter((n) => n != null);
-  return candidatos.find((n) => n > 0) ?? candidatos[0] ?? 0;
-};
-
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:10000";
 const PEDIDOS_POR_ENTREGADOR = 3;
 
@@ -543,7 +527,7 @@ const PedidosEmAndamento = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        R$ {toMoneyNumberPedido(pedido).toFixed(2)}
+                        R$ {parseFloat(pedido.valorTotal || 0).toFixed(2)}
                       </Typography>
 
                       <Chip
