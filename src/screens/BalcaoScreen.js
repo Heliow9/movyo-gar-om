@@ -74,6 +74,12 @@ const maskMoneyInput = (value) => {
   const cents = Number(digits) / 100;
   return cents.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
+const criarIdOperacaoBalcao = () => {
+  try {
+    if (typeof globalThis?.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
+  } catch {}
+  return `balcao_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+};
 const arr = (v) => (Array.isArray(v) ? v : []);
 const safeText = (v) => String(v ?? "").trim();
 const keyNorm = (v) => safeText(v).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -515,6 +521,9 @@ export default function BalcaoScreen({ navigation }) {
   const pixPollRef = useRef(null);
   const soundItemRef = useRef(null);
   const lastSoundTsRef = useRef(0);
+  const submitLockRef = useRef(false);
+  const vendaRequestIdRef = useRef(null);
+  const descontoJaPerguntadoRef = useRef(false);
 
   const restauranteId = pickRestauranteId(session);
 
@@ -761,8 +770,7 @@ export default function BalcaoScreen({ navigation }) {
     if (!restauranteId) return Alert.alert("Sessão", "Restaurante não encontrado na sessão.");
     if (!carrinho.length) return Alert.alert("Carrinho vazio", "Adicione pelo menos um item.");
     if (!online) return Alert.alert("Offline", "Pedido de balcão com pagamento precisa de internet para gerar pagamento/sincronizar agora.");
-    if (!(await garantirCaixaAberto())) return;
-    if (!descontoJaPerguntado && !dinheiroInfo) {
+    if (!descontoJaPerguntadoRef.current && !dinheiroInfo) {
       setDescontoValor("");
       setDescontoOpen(true);
       return;
@@ -772,8 +780,16 @@ export default function BalcaoScreen({ navigation }) {
       setDinheiroOpen(true);
       return;
     }
+    // useState só desabilita o botão na renderização seguinte. O ref bloqueia
+    // imediatamente dois ou três toques antes mesmo da consulta ao caixa.
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
+    setSaving(true);
+    const clientRequestId = vendaRequestIdRef.current || criarIdOperacaoBalcao();
+    vendaRequestIdRef.current = clientRequestId;
     try {
-      setSaving(true); setPix(null); setPixStatus("idle"); setPixPagoConfirmado(false); pixPagoRef.current = false;
+      setPix(null); setPixStatus("idle"); setPixPagoConfirmado(false); pixPagoRef.current = false;
+      if (!(await garantirCaixaAberto())) return;
       const itensApi = normalizarCarrinhoParaApi(carrinho);
       const totalBrutoApi = itensApi.reduce((acc, it) => acc + toNum(it.precoTotal), 0);
       const descontoApi = Math.min(Math.max(0, toNum(descontoValor)), totalBrutoApi);
@@ -787,6 +803,8 @@ export default function BalcaoScreen({ navigation }) {
       const observacaoTroco = troco > 0 ? `Cliente pagou ${money(valorPagoCliente)} em dinheiro. Troco: ${money(troco)}.` : "";
       const resumoItensTxt = linhasResumoPedido(carrinho).join("\n");
       const aberto = await api.post("/api/garcons/app/balcao", {
+        clientRequestId,
+        requestId: clientRequestId,
         restauranteId,
         nomeCliente: cliente || "Cliente balcão",
         telefoneCliente: telefoneLimpo,
@@ -823,7 +841,7 @@ export default function BalcaoScreen({ navigation }) {
         emitirNovoPedido: !isPix,
         origem: "garcom_balcao",
         tipoPedido: isPix ? "balcao_pix_pendente" : "balcao",
-      });
+      }, { headers: { "X-Idempotency-Key": clientRequestId } });
       const pedido = aberto.data?.pedido || aberto.data;
       const pedidoId = pedido?._id || pedido?.id;
       if (!pedidoId) throw new Error("API não retornou pedidoId.");
@@ -834,6 +852,8 @@ export default function BalcaoScreen({ navigation }) {
 
       if (!isPix) {
         await api.post(`/api/garcons/app/balcao/${pedidoId}/pagamento`, {
+          clientRequestId: `${clientRequestId}:pagamento`,
+          idempotencyKey: `${clientRequestId}:pagamento`,
           metodo: formaPagamento,
           formaPagamento: pagamentoSelecionado.label,
           formadePagamento: pagamentoSelecionado.label,
@@ -851,7 +871,7 @@ export default function BalcaoScreen({ navigation }) {
           observacaoPagamento: observacaoTroco,
           itens: itensApi,
           resumoItens: resumoItensTxt,
-        });
+        }, { headers: { "X-Idempotency-Key": `${clientRequestId}:pagamento` } });
         feedbackPagamentoBalcao();
         mostrarVendaConfirmada({
           forma: isCartao ? pagamentoSelecionado.label : "dinheiro",
@@ -860,10 +880,13 @@ export default function BalcaoScreen({ navigation }) {
           troco,
           pedidoId,
         });
+        vendaRequestIdRef.current = null;
+        descontoJaPerguntadoRef.current = false;
         setCarrinho([]); setTelefone(""); setCliente("Cliente balcão"); setPagamento("dinheiro"); setValorPagoDinheiro(""); setDinheiroOpen(false); setDescontoValor(""); setDescontoJaPerguntado(false);
         return;
       }
       const pixRes = await api.post(`/api/garcons/app/balcao/${pedidoId}/pix`, {
+        clientRequestId: `${clientRequestId}:pix`, idempotencyKey: `${clientRequestId}:pix`,
         valor: totalApi, totalBruto: totalBrutoApi, descontoValor: descontoApi, valorDesconto: descontoApi, desconto: descontoApi, total: totalApi, valorTotal: totalApi,
         telefoneCliente: telefoneLimpo, telefoneOriginal: telefone,
         itens: itensApi, itensPedido: itensApi, produtos: itensApi,
@@ -872,14 +895,18 @@ export default function BalcaoScreen({ navigation }) {
         aguardandoPagamento: true, pixPendente: true, pagamentoPendente: true,
         statusPagamento: "aguardando_pagamento", status: "aguardando_pagamento",
         tipoPedido: "balcao_pix_pendente"
-      });
+      }, { headers: { "X-Idempotency-Key": `${clientRequestId}:pix` } });
       setPix({ ...(pixRes.data || {}), pedidoId, valor: totalApi });
+      vendaRequestIdRef.current = null;
       setPixStatus("aguardando_pagamento");
       setBanner({ type: "waiting", title: "PIX aguardando pagamento", message: "Mostre o QR Code ou envie para o cliente. A tela confirma automaticamente quando pagar." });
       Alert.alert("PIX gerado", "Mostre o QR Code ou envie o link/copia e cola para o cliente.");
     } catch (e) {
       Alert.alert("Erro", e?.response?.data?.message || e?.message || "Falha ao criar pedido de balcão.");
-    } finally { setSaving(false); }
+    } finally {
+      submitLockRef.current = false;
+      setSaving(false);
+    }
   };
 
   const confirmarPixPago = useCallback((payload = {}) => {
@@ -1239,6 +1266,7 @@ export default function BalcaoScreen({ navigation }) {
               <Pressable
                 onPress={() => {
                   if (descontoAplicado > totalBruto) return Alert.alert("Desconto inválido", "O desconto não pode ser maior que o total do pedido.");
+                  descontoJaPerguntadoRef.current = true;
                   setDescontoJaPerguntado(true);
                   setDescontoOpen(false);
                   setTimeout(() => finalizar(), 80);
@@ -1249,7 +1277,7 @@ export default function BalcaoScreen({ navigation }) {
                 <Text style={styles.finishText}>Continuar pagamento</Text>
               </Pressable>
               <Pressable
-                onPress={() => { setDescontoValor(""); setDescontoJaPerguntado(true); setDescontoOpen(false); setTimeout(() => finalizar(), 80); }}
+                onPress={() => { setDescontoValor(""); descontoJaPerguntadoRef.current = true; setDescontoJaPerguntado(true); setDescontoOpen(false); setTimeout(() => finalizar(), 80); }}
                 disabled={saving}
                 style={[styles.secondaryBtn, { marginTop: 10 }]}
               >
