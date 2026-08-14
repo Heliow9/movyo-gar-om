@@ -17,7 +17,9 @@ import {
   RefreshControl,
   useWindowDimensions,
   StatusBar,
+  Vibration,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -29,6 +31,8 @@ import { getAuthBlockInfoFromError, getRestauranteAccessBlockInfo } from "../uti
 import { connectSocket, getSocket, onSocketState } from "../socket/socket";
 import { alertCaixaAberto, alertCaixaFechado, alertNovoPedido } from "../utils/pwaNotifications";
 import { hasPlanFeature } from "../utils/planRules";
+import OrderMilestoneCelebration from "../components/OrderMilestoneCelebration";
+const { latestCrossedDailyOrderMilestone } = require("../utils/orderMilestones");
 
 const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza" };
 const MOCK_IMAGE = "https://cdn.pixabay.com/photo/2017/12/09/08/18/pizza-3007395_960_720.jpg";
@@ -317,6 +321,10 @@ export default function HubRestauranteScreen({ onLogout }) {
   const [garcons, setGarcons] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const pedidosNotificadosRef = useRef(new Set());
+  const dailyOrdersBaselineRef = useRef(null);
+  const milestoneAttemptedRef = useRef(new Set());
+  const [celebratedMilestone, setCelebratedMilestone] = useState(null);
+  const closeMilestoneCelebration = useCallback(() => setCelebratedMilestone(null), []);
   const [caixa, setCaixa] = useState(null);
 
   const [categoriaForm, setCategoriaForm] = useState(emptyCategoria());
@@ -407,6 +415,51 @@ export default function HubRestauranteScreen({ onLogout }) {
       mesasOcupadas,
     };
   }, [financialReport, dashboardResumo, pedidosAReceber.length, mesas]);
+
+  const dailyOrdersCount = Number(
+    dashboardResumo?.pedidosHojeRestaurante
+      ?? dashboardResumo?.pedidosHoje
+      ?? todayReport?.resumo?.pedidos
+      ?? 0
+  );
+
+  useEffect(() => {
+    if (!restauranteId || loading || !Number.isFinite(dailyOrdersCount)) return;
+
+    const day = toLocalISODate();
+    const baseline = dailyOrdersBaselineRef.current;
+    if (!baseline || baseline.day !== day || baseline.restauranteId !== String(restauranteId)) {
+      dailyOrdersBaselineRef.current = { day, restauranteId: String(restauranteId), count: dailyOrdersCount };
+      milestoneAttemptedRef.current.clear();
+      return;
+    }
+
+    dailyOrdersBaselineRef.current = { ...baseline, count: dailyOrdersCount };
+    const milestone = latestCrossedDailyOrderMilestone(baseline.count, dailyOrdersCount);
+    if (!milestone) return;
+
+    const attemptKey = `${restauranteId}:${day}:${milestone}`;
+    if (milestoneAttemptedRef.current.has(attemptKey)) return;
+    milestoneAttemptedRef.current.add(attemptKey);
+
+    const storageKey = `@movyo:order-milestone:${restauranteId}:${day}`;
+    (async () => {
+      try {
+        const stored = Number(await AsyncStorage.getItem(storageKey) || 0);
+        if (stored >= milestone) return;
+        await AsyncStorage.setItem(storageKey, String(milestone));
+      } catch {
+        // A celebração ainda funciona em modo privado ou quando o armazenamento falhar.
+      }
+
+      if (Platform.OS === "web") {
+        try { globalThis?.navigator?.vibrate?.([120, 70, 180, 70, 260]); } catch {}
+      } else {
+        Vibration.vibrate([0, 120, 70, 180, 70, 260]);
+      }
+      setCelebratedMilestone(milestone);
+    })();
+  }, [dailyOrdersCount, loading, restauranteId]);
 
   const operationStatus = useMemo(() => ({
     online: networkOnline,
@@ -1197,6 +1250,11 @@ export default function HubRestauranteScreen({ onLogout }) {
 
   return (
     <>
+      <OrderMilestoneCelebration
+        milestone={celebratedMilestone}
+        visible={!!celebratedMilestone}
+        onClose={closeMilestoneCelebration}
+      />
       <StatusBar barStyle="light-content" backgroundColor="#111827" />
       <SafeAreaView style={styles.page} edges={["top"]}>
         {actionLabel || refreshing ? (
