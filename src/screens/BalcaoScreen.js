@@ -509,7 +509,6 @@ export default function BalcaoScreen({ navigation }) {
   const [valorPagoDinheiro, setValorPagoDinheiro] = useState("");
   const [descontoOpen, setDescontoOpen] = useState(false);
   const [descontoValor, setDescontoValor] = useState("");
-  const [descontoJaPerguntado, setDescontoJaPerguntado] = useState(false);
   const [pixStatus, setPixStatus] = useState("idle");
   const [pixChecking, setPixChecking] = useState(false);
   const [sendingWhats, setSendingWhats] = useState(false);
@@ -523,7 +522,6 @@ export default function BalcaoScreen({ navigation }) {
   const lastSoundTsRef = useRef(0);
   const submitLockRef = useRef(false);
   const vendaRequestIdRef = useRef(null);
-  const descontoJaPerguntadoRef = useRef(false);
 
   const restauranteId = pickRestauranteId(session);
 
@@ -634,6 +632,18 @@ export default function BalcaoScreen({ navigation }) {
       setBanner((current) => current?.title === titulo ? null : current);
     }, 9000);
   }, []);
+
+  const voltarParaHomeAposVenda = useCallback(({ delay = 0 } = {}) => {
+    const executar = () => {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.location.replace("/");
+        return;
+      }
+      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+    };
+    if (delay > 0) setTimeout(executar, delay);
+    else executar();
+  }, [navigation]);
 
   const loadProdutos = useCallback(async () => {
     try {
@@ -770,11 +780,6 @@ export default function BalcaoScreen({ navigation }) {
     if (!restauranteId) return Alert.alert("Sessão", "Restaurante não encontrado na sessão.");
     if (!carrinho.length) return Alert.alert("Carrinho vazio", "Adicione pelo menos um item.");
     if (!online) return Alert.alert("Offline", "Pedido de balcão com pagamento precisa de internet para gerar pagamento/sincronizar agora.");
-    if (!descontoJaPerguntadoRef.current && !dinheiroInfo) {
-      setDescontoValor("");
-      setDescontoOpen(true);
-      return;
-    }
     if (pagamentoSelecionado.metodo === "dinheiro" && !dinheiroInfo) {
       setValorPagoDinheiro(maskMoneyInput(String(Math.round(total * 100))));
       setDinheiroOpen(true);
@@ -881,9 +886,8 @@ export default function BalcaoScreen({ navigation }) {
           pedidoId,
         });
         vendaRequestIdRef.current = null;
-        descontoJaPerguntadoRef.current = false;
-        setCarrinho([]); setTelefone(""); setCliente("Cliente balcão"); setPagamento("dinheiro"); setValorPagoDinheiro(""); setDinheiroOpen(false); setDescontoValor(""); setDescontoJaPerguntado(false);
-        navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+        setCarrinho([]); setTelefone(""); setCliente("Cliente balcão"); setPagamento("dinheiro"); setValorPagoDinheiro(""); setDinheiroOpen(false); setDescontoValor("");
+        voltarParaHomeAposVenda({ delay: Platform.OS === "web" ? 300 : 0 });
         return;
       }
       const pixRes = await api.post(`/api/garcons/app/balcao/${pedidoId}/pix`, {
@@ -934,16 +938,14 @@ export default function BalcaoScreen({ navigation }) {
     }
 
     vendaRequestIdRef.current = null;
-    descontoJaPerguntadoRef.current = false;
     setCarrinho([]);
     setTelefone("");
     setCliente("Cliente balcão");
     setPagamento("dinheiro");
     setValorPagoDinheiro("");
     setDescontoValor("");
-    setDescontoJaPerguntado(false);
-    setTimeout(() => navigation.reset({ index: 0, routes: [{ name: "Home" }] }), 1200);
-  }, [pix, cliente, total, carrinho, feedbackPagamentoBalcao, navigation]);
+    voltarParaHomeAposVenda({ delay: 1200 });
+  }, [pix, cliente, total, carrinho, feedbackPagamentoBalcao, voltarParaHomeAposVenda]);
 
   const verificarPixAgora = useCallback(async ({ silent = false } = {}) => {
     if (!pix?.pedidoId || pixPagoRef.current) return;
@@ -1082,6 +1084,14 @@ export default function BalcaoScreen({ navigation }) {
               );
             })}
           </View>
+          <Pressable onPress={() => setDescontoOpen(true)} style={styles.discountButton}>
+            <Ionicons name="pricetag-outline" size={17} color="#083358" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.discountButtonTitle}>Desconto opcional</Text>
+              <Text style={styles.discountButtonSub}>{descontoAplicado > 0 ? `${money(descontoAplicado)} aplicado` : "Toque somente se esta venda tiver desconto"}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={17} color="#64748b" />
+          </Pressable>
         </View>
 
         <TextInput value={q} onChangeText={setQ} style={styles.search} placeholder="Buscar produto ou categoria..." />
@@ -1278,18 +1288,15 @@ export default function BalcaoScreen({ navigation }) {
               <Pressable
                 onPress={() => {
                   if (descontoAplicado > totalBruto) return Alert.alert("Desconto inválido", "O desconto não pode ser maior que o total do pedido.");
-                  descontoJaPerguntadoRef.current = true;
-                  setDescontoJaPerguntado(true);
                   setDescontoOpen(false);
-                  setTimeout(() => finalizar(), 80);
                 }}
                 disabled={saving}
                 style={[styles.finish, saving && styles.disabled]}
               >
-                <Text style={styles.finishText}>Continuar pagamento</Text>
+                <Text style={styles.finishText}>Aplicar desconto</Text>
               </Pressable>
               <Pressable
-                onPress={() => { setDescontoValor(""); descontoJaPerguntadoRef.current = true; setDescontoJaPerguntado(true); setDescontoOpen(false); setTimeout(() => finalizar(), 80); }}
+                onPress={() => { setDescontoValor(""); setDescontoOpen(false); }}
                 disabled={saving}
                 style={[styles.secondaryBtn, { marginTop: 10 }]}
               >
@@ -1356,6 +1363,9 @@ const styles = StyleSheet.create({
   content: { padding: 14, paddingBottom: 34 },
   offline: { backgroundColor: "#fffbeb", borderColor: "#fde68a", borderWidth: 1, color: "#92400e", padding: 12, borderRadius: 16, fontWeight: "800", marginBottom: 12 },
   card: { backgroundColor: "#fff", borderRadius: 24, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: "rgba(15,23,42,0.08)" },
+  discountButton: { marginTop: 12, borderRadius: 17, borderWidth: 1, borderColor: "#dbeafe", backgroundColor: "#f8fbff", padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
+  discountButtonTitle: { color: "#083358", fontWeight: "900", fontSize: 13 },
+  discountButtonSub: { color: "#64748b", fontWeight: "700", fontSize: 11, marginTop: 2 },
   changeBox: { marginTop: 12, marginBottom: 12, borderRadius: 18, padding: 14, backgroundColor: "#ecfdf5", borderWidth: 1, borderColor: "#bbf7d0" },
   changeLabel: { color: "#166534", fontWeight: "900", fontSize: 12, textTransform: "uppercase" },
   changeValue: { color: "#065f46", fontWeight: "900", fontSize: 24, marginTop: 2 },
