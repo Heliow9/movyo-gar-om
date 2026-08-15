@@ -3,36 +3,35 @@ function normalizeOrderCount(value) {
   return Number.isFinite(count) && count > 0 ? count : 0;
 }
 
-function nextDailyOrderMilestone(afterCount) {
-  const count = normalizeOrderCount(afterCount);
+const INTERNAL_ORDER_PREFIXES = new Set(["BK", "BT", "IF", "SL", "MS", "99F"]);
 
-  if (count < 500) return (Math.floor(count / 100) + 1) * 100;
-  if (count < 3000) return (Math.floor(count / 500) + 1) * 500;
-  return (Math.floor(count / 1000) + 1) * 1000;
+function parseOrderSequence(value) {
+  const raw = String(value || "").trim().toUpperCase().replace(/^#/, "");
+  const match = raw.match(/^([A-Z0-9]*?[A-Z][A-Z0-9]*?)(\d+)$/);
+  if (!match || !INTERNAL_ORDER_PREFIXES.has(match[1])) return null;
+  const number = Number(match[2]);
+  if (!Number.isSafeInteger(number) || number <= 0) return null;
+  return { code: raw, prefix: match[1], number };
 }
 
-function crossedDailyOrderMilestones(previousCount, currentCount) {
-  const previous = normalizeOrderCount(previousCount);
-  const current = normalizeOrderCount(currentCount);
-  if (current <= previous) return [];
-
-  const crossed = [];
-  let milestone = nextDailyOrderMilestone(previous);
-  while (milestone <= current) {
-    crossed.push(milestone);
-    milestone = nextDailyOrderMilestone(milestone);
-  }
-  return crossed;
+function isOrderSequenceMilestone(value) {
+  const number = normalizeOrderCount(value);
+  if (!number) return false;
+  if (number <= 500) return number >= 100 && number % 100 === 0;
+  if (number <= 3000) return number % 500 === 0;
+  return number % 1000 === 0;
 }
 
-function latestCrossedDailyOrderMilestone(previousCount, currentCount) {
-  const crossed = crossedDailyOrderMilestones(previousCount, currentCount);
-  return crossed.length ? crossed[crossed.length - 1] : null;
+function getOrderSequenceMilestone(pedido = {}) {
+  const sequence = parseOrderSequence(
+    pedido?.numeroPedido ?? pedido?.numero ?? pedido?.codigoPedido ?? pedido?.codigo
+  );
+  return sequence && isOrderSequenceMilestone(sequence.number) ? sequence : null;
 }
 
 module.exports = {
-  crossedDailyOrderMilestones,
-  latestCrossedDailyOrderMilestone,
-  nextDailyOrderMilestone,
+  getOrderSequenceMilestone,
+  isOrderSequenceMilestone,
   normalizeOrderCount,
+  parseOrderSequence,
 };

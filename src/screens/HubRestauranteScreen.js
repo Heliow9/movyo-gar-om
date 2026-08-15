@@ -32,7 +32,7 @@ import { connectSocket, getSocket, onSocketState } from "../socket/socket";
 import { alertCaixaAberto, alertCaixaFechado, alertNovoPedido } from "../utils/pwaNotifications";
 import { hasPlanFeature } from "../utils/planRules";
 import OrderMilestoneCelebration from "../components/OrderMilestoneCelebration";
-const { latestCrossedDailyOrderMilestone } = require("../utils/orderMilestones");
+const { getOrderSequenceMilestone } = require("../utils/orderMilestones");
 
 const TIPO_CATEGORIA = { SIMPLES: "simples", PIZZA: "pizza" };
 const MOCK_IMAGE = "https://cdn.pixabay.com/photo/2017/12/09/08/18/pizza-3007395_960_720.jpg";
@@ -321,7 +321,6 @@ export default function HubRestauranteScreen({ onLogout }) {
   const [garcons, setGarcons] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const pedidosNotificadosRef = useRef(new Set());
-  const dailyOrdersBaselineRef = useRef(null);
   const milestoneAttemptedRef = useRef(new Set());
   const [celebratedMilestone, setCelebratedMilestone] = useState(null);
   const closeMilestoneCelebration = useCallback(() => setCelebratedMilestone(null), []);
@@ -416,38 +415,21 @@ export default function HubRestauranteScreen({ onLogout }) {
     };
   }, [financialReport, dashboardResumo, pedidosAReceber.length, mesas]);
 
-  const dailyOrdersCount = Number(
-    dashboardResumo?.pedidosHojeRestaurante
-      ?? dashboardResumo?.pedidosHoje
-      ?? todayReport?.resumo?.pedidos
-      ?? 0
-  );
-
   useEffect(() => {
-    if (!restauranteId || loading || !Number.isFinite(dailyOrdersCount)) return;
+    if (!restauranteId || loading || !pedidos.length) return;
+    const sequence = getOrderSequenceMilestone(pedidos[0]);
+    if (!sequence) return;
 
-    const day = toLocalISODate();
-    const baseline = dailyOrdersBaselineRef.current;
-    if (!baseline || baseline.day !== day || baseline.restauranteId !== String(restauranteId)) {
-      dailyOrdersBaselineRef.current = { day, restauranteId: String(restauranteId), count: dailyOrdersCount };
-      milestoneAttemptedRef.current.clear();
-      return;
-    }
-
-    dailyOrdersBaselineRef.current = { ...baseline, count: dailyOrdersCount };
-    const milestone = latestCrossedDailyOrderMilestone(baseline.count, dailyOrdersCount);
-    if (!milestone) return;
-
-    const attemptKey = `${restauranteId}:${day}:${milestone}`;
+    const attemptKey = `${restauranteId}:${sequence.prefix}:${sequence.number}`;
     if (milestoneAttemptedRef.current.has(attemptKey)) return;
     milestoneAttemptedRef.current.add(attemptKey);
 
-    const storageKey = `@movyo:order-milestone:${restauranteId}:${day}`;
+    const storageKey = `@movyo:order-sequence-milestone:${restauranteId}:${sequence.prefix}:${sequence.number}`;
     (async () => {
       try {
-        const stored = Number(await AsyncStorage.getItem(storageKey) || 0);
-        if (stored >= milestone) return;
-        await AsyncStorage.setItem(storageKey, String(milestone));
+        const stored = await AsyncStorage.getItem(storageKey);
+        if (stored === "shown") return;
+        await AsyncStorage.setItem(storageKey, "shown");
       } catch {
         // A celebração ainda funciona em modo privado ou quando o armazenamento falhar.
       }
@@ -457,9 +439,9 @@ export default function HubRestauranteScreen({ onLogout }) {
       } else {
         Vibration.vibrate([0, 120, 70, 180, 70, 260]);
       }
-      setCelebratedMilestone(milestone);
+      setCelebratedMilestone(sequence.number);
     })();
-  }, [dailyOrdersCount, loading, restauranteId]);
+  }, [loading, pedidos, restauranteId]);
 
   const operationStatus = useMemo(() => ({
     online: networkOnline,

@@ -57,17 +57,20 @@ function Particle({ config, progress }) {
 export default function OrderMilestoneCelebration({ milestone, visible, onClose }) {
   const entrance = useRef(new Animated.Value(0)).current;
   const fireworks = useRef(new Animated.Value(0)).current;
+  const countdown = useRef(new Animated.Value(1)).current;
   const particles = useMemo(() => PARTICLES, []);
 
   useEffect(() => {
     if (!visible) {
       entrance.setValue(0);
       fireworks.setValue(0);
+      countdown.setValue(1);
       return undefined;
     }
 
     entrance.setValue(0);
     fireworks.setValue(0);
+    countdown.setValue(1);
     Animated.parallel([
       Animated.spring(entrance, {
         toValue: 1,
@@ -81,18 +84,24 @@ export default function OrderMilestoneCelebration({ milestone, visible, onClose 
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
+      Animated.timing(countdown, {
+        toValue: 0,
+        duration: 15000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
     ]).start();
 
-    const timeout = setTimeout(onClose, 4800);
+    const timeout = setTimeout(onClose, 15000);
     return () => clearTimeout(timeout);
-  }, [entrance, fireworks, onClose, visible]);
+  }, [countdown, entrance, fireworks, onClose, visible]);
 
   const scale = entrance.interpolate({ inputRange: [0, 1], outputRange: [0.65, 1] });
   const translateY = entrance.interpolate({ inputRange: [0, 1], outputRange: [35, 0] });
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <View style={styles.overlay} accessibilityViewIsModal accessibilityLabel={`Comemoração de ${milestone} pedidos no dia`}>
+      <View style={styles.overlay} accessibilityViewIsModal accessibilityLabel={`Comemoração do marco de ${milestone} pedidos`}>
         <View pointerEvents="none" style={styles.particlesLayer}>
           {particles.map((particle) => <Particle key={particle.id} config={particle} progress={fireworks} />)}
         </View>
@@ -102,13 +111,17 @@ export default function OrderMilestoneCelebration({ milestone, visible, onClose 
             <View style={styles.iconCircle}>
               <Ionicons name="trophy" size={48} color="#f59e0b" />
             </View>
-            <Text style={styles.eyebrow}>NOVO MARCO DO DIA!</Text>
+            <Text style={styles.eyebrow}>NOVO MARCO DE PEDIDOS!</Text>
             <Text style={styles.number}>{Number(milestone || 0).toLocaleString("pt-BR")}</Text>
             <Text style={styles.title}>pedidos realizados</Text>
             <Text style={styles.message}>Parabéns, equipe! Vocês estão fazendo acontecer.</Text>
             <Pressable onPress={onClose} style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} accessibilityRole="button">
-              <Text style={styles.buttonText}>Continuar trabalhando</Text>
+              <Text style={styles.buttonText}>Fechar comemoração</Text>
             </Pressable>
+            <View style={styles.countdownTrack}>
+              <Animated.View style={[styles.countdownBar, { transform: [{ scaleX: countdown }] }]} />
+            </View>
+            <Text style={styles.countdownText}>Fecha automaticamente em 15 segundos.</Text>
           </LinearGradient>
         </Animated.View>
       </View>
@@ -198,4 +211,7 @@ const styles = StyleSheet.create({
   },
   buttonPressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
   buttonText: { color: "#c2410c", fontSize: 15, fontWeight: "900" },
+  countdownTrack: { backgroundColor: "rgba(255,255,255,.24)", borderRadius: 999, height: 4, marginTop: 22, overflow: "hidden", width: "100%" },
+  countdownBar: { backgroundColor: "#fff", height: "100%", width: "100%" },
+  countdownText: { color: "rgba(255,255,255,.84)", fontSize: 12, fontWeight: "700", marginTop: 9 },
 });
