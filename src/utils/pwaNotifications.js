@@ -313,7 +313,18 @@ export async function showLocalNotification(title, options = {}) {
 export async function alertNovoPedido(pedido = {}, options = {}) {
   const codigo = pedido.codigo || pedido.numeroPedido || pedido.numero || pedido._id || "";
   const cliente = pedido.nomeCliente || pedido?.cliente?.nome || pedido.cliente || pedido.nome || "Cliente";
-  const total = pedido.total || pedido.valorTotal || pedido.valor || "";
+  const moneyCandidates = [pedido.total, pedido.valorTotal, pedido.valor, pedido.subtotal]
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const itemTotal = (Array.isArray(pedido.itens) ? pedido.itens : []).reduce((sum, item) => {
+    const explicit = Number(item?.precoTotal ?? item?.total ?? item?.valorTotal);
+    if (Number.isFinite(explicit) && explicit > 0) return sum + explicit;
+    const quantity = Number(item?.quantidade ?? item?.qtd ?? 1) || 1;
+    const unit = Number(item?.precoUnitario ?? item?.preco ?? item?.valor ?? 0) || 0;
+    return sum + (quantity * unit);
+  }, 0);
+  const total = moneyCandidates[0] || itemTotal || "";
+  const totalFormatado = total ? Number(total).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
   const status = String(pedido.status || pedido.statusPedido || "").trim().toLowerCase().replace(/[ -]/g, "_");
   const emProducao = options.emProducao === true || ["em_producao", "producao", "preparando", "em_preparo"].includes(status);
 
@@ -321,7 +332,7 @@ export async function alertNovoPedido(pedido = {}, options = {}) {
   playNotificationSound();
 
   await showLocalNotification(emProducao ? "Pedido entrou em produção" : "Novo pedido recebido na Movyo", {
-    body: `${codigo ? `#${codigo} • ` : ""}${cliente}${total ? ` • R$ ${total}` : ""}`,
+    body: `${codigo ? `#${codigo} • ` : ""}${cliente}${totalFormatado ? ` • R$ ${totalFormatado}` : ""}`,
     tag: codigo ? `pedido-${codigo}-${emProducao ? "producao" : "novo"}` : `pedido-movyo-${emProducao ? "producao" : "novo"}`,
     renotify: true,
     data: {

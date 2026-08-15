@@ -30,9 +30,11 @@ import { useAppTheme } from "../theme/ThemeProvider";
 import { cachedApiGet, cacheGetData, cacheSet } from "../utils/smartCache";
 import { flushQueue, getQueueCount, startQueueWatcher } from "../utils/offlineQueue";
 import { alertCaixaAberto, alertCaixaFechado, alertNovoPedido } from "../utils/pwaNotifications";
+import { pickPedidoTotal as pickPedidoTotalSeguro } from "../utils/pedidoTotals";
 
 const RESUMO_CACHE_KEY = "garcom:dashboard:resumo:v5-live-garcom";
 const HOME_REFRESH_MS = 10000;
+const CAIXA_REFRESH_MS = 5 * 60 * 1000;
 
 const moneyBRL = (n) => {
   const v = Number(n || 0);
@@ -107,7 +109,7 @@ const isPedidoAReceber = (pedido) => isOrigemVitrine(pedido) && isStatusAReceber
 const pickPedidoId = (p) => p?._id || p?.id || p?.pedidoId;
 const pickPedidoNumero = (p) => p?.numeroPedido || p?.numero_pedido || p?.pedidoNumero || p?.codigoPedido || p?.numero || p?.codigo || String(pickPedidoId(p) || "").slice(-6);
 const pickPedidoCliente = (p) => p?.nomeCliente || p?.cliente?.nome || p?.clienteNome || p?.mesaCliente || p?.cliente || "Cliente";
-const pickPedidoTotal = (p) => p?.total ?? p?.valorTotal ?? p?.valor ?? p?.subtotal ?? "";
+const pickPedidoTotal = (p) => pickPedidoTotalSeguro(p);
 const normalizePedidoStatusForNotification = (p = {}) =>
   String(p?.status || p?.statusPedido || p?.pedido?.status || "")
     .trim()
@@ -136,6 +138,8 @@ export default function HomeScreen({ navigation, onLogout }) {
   const [queueCount, setQueueCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [liveRefresh, setLiveRefresh] = useState(true);
+  const [caixaAberto, setCaixaAberto] = useState(null);
+  const [caixaAtualizadoEm, setCaixaAtualizadoEm] = useState(null);
   const notifiedPedidosRef = useRef(new Set());
 
   useEffect(() => {
@@ -166,6 +170,33 @@ export default function HomeScreen({ navigation, onLogout }) {
   const loadQueueCount = useCallback(async () => {
     try { setQueueCount(await getQueueCount()); } catch { setQueueCount(0); }
   }, []);
+
+  const refreshCaixaStatus = useCallback(async () => {
+    const currentSession = await getSession();
+    const restauranteId = pickRestauranteId(currentSession);
+    if (!restauranteId) return;
+    try {
+      const response = await api.get(`/api/caixa/${restauranteId}/atual`, {
+        params: { fresh: 1, _t: Date.now() },
+      });
+      const data = response?.data || {};
+      const caixa = data?.caixa || data?.sessao || data;
+      const aberto = data?.aberto === true || String(caixa?.status || "").toLowerCase() === "aberto" || caixa?.aberto === true;
+      setCaixaAberto(aberto);
+      setCaixaAtualizadoEm(new Date().toISOString());
+    } catch (error) {
+      if (error?.response?.status === 404) {
+        setCaixaAberto(false);
+        setCaixaAtualizadoEm(new Date().toISOString());
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshCaixaStatus();
+    const interval = setInterval(refreshCaixaStatus, CAIXA_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [refreshCaixaStatus]);
 
   const notifyPedidoRecebido = useCallback(async (pedido = {}, tipo = "novo") => {
     const id = pickPedidoId(pedido) || pickPedidoNumero(pedido);
@@ -350,11 +381,15 @@ export default function HomeScreen({ navigation, onLogout }) {
         schedule();
       };
       handleCaixaAberto = (payload = {}) => {
+        setCaixaAberto(true);
+        setCaixaAtualizadoEm(new Date().toISOString());
         if (Platform.OS === "web") alertCaixaAberto(payload?.caixa || payload).catch(() => {});
         else Alert.alert("Caixa aberto", "O caixa do restaurante foi aberto.");
         schedule();
       };
       handleCaixaFechado = (payload = {}) => {
+        setCaixaAberto(false);
+        setCaixaAtualizadoEm(new Date().toISOString());
         if (Platform.OS === "web") alertCaixaFechado(payload?.caixa || payload).catch(() => {});
         else Alert.alert("Caixa fechado", "O caixa do restaurante foi fechado.");
         schedule();
@@ -385,7 +420,18 @@ export default function HomeScreen({ navigation, onLogout }) {
   const restauranteNome = session?.restaurante?.nome || "Movyo Garçom";
   const garcomNome = session?.garcom?.apelido || session?.garcom?.nome || "Pronto pra atender";
 
-  const onRefresh = () => { setRefreshing(true); fetchDashboard({ silent: true }); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    refreshCaixaStatus();
+    fetchDashboard({ silent: true });
+  };
+  const abrirBalcao = () => {
+    if (caixaAberto === false) {
+      Alert.alert("Caixa fechado", "Não é possível lançar pedidos de balcão enquanto o caixa estiver fechado.");
+      return;
+    }
+    navigation.navigate("Balcao");
+  };
   const logoutNow = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -482,6 +528,22 @@ export default function HomeScreen({ navigation, onLogout }) {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentInner} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         <NotificationPermissionBanner />
+        {caixaAberto !== null && (
+          <View style={[styles.caixaBanner, caixaAberto ? styles.caixaAbertoBanner : styles.caixaFechadoBanner]}>
+            <Ionicons name={caixaAberto ? "lock-open-outline" : "lock-closed-outline"} size={22} color={caixaAberto ? "#166534" : "#991b1b"} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.caixaBannerTitle, caixaAberto ? styles.caixaAbertoText : styles.caixaFechadoText]}>
+                {caixaAberto ? "Caixa aberto: vendas liberadas" : "Caixa fechado: novos pedidos bloqueados"}
+              </Text>
+              <Text style={styles.caixaBannerSub}>
+                {caixaAberto
+                  ? "Pedidos de balcão e lançamentos em mesas podem ser realizados."
+                  : "Abra o caixa no Movyo Desktop para lançar pedidos de balcão ou de mesas."}
+                {caixaAtualizadoEm ? ` Atualizado às ${fmtTime(caixaAtualizadoEm)}; verificação automática a cada 5 minutos.` : ""}
+              </Text>
+            </View>
+          </View>
+        )}
         {!isOnline && (
           <View style={styles.offlineBanner}>
             <Ionicons name="wifi-outline" size={18} color="#92400e" />
@@ -498,7 +560,7 @@ export default function HomeScreen({ navigation, onLogout }) {
 
         <Text style={styles.sectionTitle}>Ações rápidas</Text>
         <View style={styles.actionsGrid}>
-          <Action icon="grid-outline" title="Mesas" sub="Abrir e ver consumo" badge={dashboard.mesasAbertas} onPress={() => navigation.navigate("Mesas")} />
+          <Action icon="grid-outline" title="Mesas" sub={caixaAberto === false ? "Consulta liberada; lançamentos bloqueados" : "Abrir e ver consumo"} badge={dashboard.mesasAbertas} onPress={() => navigation.navigate("Mesas")} />
           <Action icon="receipt-outline" title="Pedidos" sub="Fila e status" badge={dashboard.pedidosPendentes} onPress={() => navigation.navigate("Pedidos")} />
           <Action
             icon="notifications-outline"
@@ -507,7 +569,7 @@ export default function HomeScreen({ navigation, onLogout }) {
             badge={dashboard.pedidosAReceber}
             onPress={() => navigation.navigate("Pedidos", { modo: "a_receber" })}
           />
-          <Action icon="storefront-outline" title="Balcão" sub="Pedido rápido + PIX" onPress={() => navigation.navigate("Balcao")} />
+          <Action icon="storefront-outline" title="Balcão" sub={caixaAberto === false ? "Bloqueado: caixa fechado" : "Pedido rápido + PIX"} onPress={abrirBalcao} />
           <Action icon="person-outline" title="Meu perfil" sub="Permissões e dados" onPress={() => navigation.navigate("MeuPerfil")} />
           <Action icon="sync-outline" title="Sincronizar" sub={isOnline ? "Enviar offline" : "Sem internet"} badge={queueCount} onPress={syncNow} disabled={!isOnline || syncing} />
         </View>
@@ -553,6 +615,13 @@ const styles = StyleSheet.create({
   contentInner: { padding: 16, paddingBottom: 34 },
   offlineBanner: { marginBottom: 14, padding: 12, borderRadius: 20, backgroundColor: "#fffbeb", borderWidth: 1, borderColor: "#fde68a", flexDirection: "row", gap: 9, alignItems: "flex-start" },
   offlineText: { flex: 1, color: "#92400e", fontWeight: "800", lineHeight: 18, fontSize: 12 },
+  caixaBanner: { marginBottom: 14, padding: 14, borderRadius: 20, borderWidth: 1, flexDirection: "row", gap: 11, alignItems: "flex-start" },
+  caixaAbertoBanner: { backgroundColor: "#f0fdf4", borderColor: "#86efac" },
+  caixaFechadoBanner: { backgroundColor: "#fef2f2", borderColor: "#fca5a5" },
+  caixaBannerTitle: { fontSize: 14, fontWeight: "900" },
+  caixaAbertoText: { color: "#166534" },
+  caixaFechadoText: { color: "#991b1b" },
+  caixaBannerSub: { color: "#475569", fontSize: 12, fontWeight: "700", lineHeight: 18, marginTop: 3 },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   kpiCard: { minHeight: 132, padding: 14, borderRadius: 26, backgroundColor: "#fff", borderWidth: 1, borderColor: "rgba(15,23,42,0.07)", shadowColor: "#0f172a", shadowOpacity: 0.09, shadowRadius: 18, elevation: 3 },
   kpiIcon: { width: 34, height: 34, borderRadius: 13, backgroundColor: "#083358", alignItems: "center", justifyContent: "center", marginBottom: 12 },

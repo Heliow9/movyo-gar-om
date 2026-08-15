@@ -22,6 +22,7 @@ import {
   pickRestauranteFromPayload,
 } from "../utils/licenseGuard";
 import { disconnectSocket } from "../socket/socket";
+import OrderMilestoneMonitor from "../components/OrderMilestoneMonitor";
 
 const Stack = createNativeStackNavigator();
 
@@ -197,6 +198,7 @@ export default function AppNavigator() {
   return (
     <>
       <PushSubscriptionSync enabled />
+      <OrderMilestoneMonitor enabled />
       <Stack.Navigator screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
         <Stack.Screen name="Home">{(props) => <HomeScreen {...props} onLogout={manualLogout} />}</Stack.Screen>
         <Stack.Screen name="Mesas" component={MesasScreen} />

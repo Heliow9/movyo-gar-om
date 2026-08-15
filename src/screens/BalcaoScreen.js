@@ -883,6 +883,7 @@ export default function BalcaoScreen({ navigation }) {
         vendaRequestIdRef.current = null;
         descontoJaPerguntadoRef.current = false;
         setCarrinho([]); setTelefone(""); setCliente("Cliente balcão"); setPagamento("dinheiro"); setValorPagoDinheiro(""); setDinheiroOpen(false); setDescontoValor(""); setDescontoJaPerguntado(false);
+        navigation.reset({ index: 0, routes: [{ name: "Home" }] });
         return;
       }
       const pixRes = await api.post(`/api/garcons/app/balcao/${pedidoId}/pix`, {
@@ -931,7 +932,18 @@ export default function BalcaoScreen({ navigation }) {
         tipo: "confirmacao",
       })).catch(() => {});
     }
-  }, [pix, cliente, total, carrinho, feedbackPagamentoBalcao]);
+
+    vendaRequestIdRef.current = null;
+    descontoJaPerguntadoRef.current = false;
+    setCarrinho([]);
+    setTelefone("");
+    setCliente("Cliente balcão");
+    setPagamento("dinheiro");
+    setValorPagoDinheiro("");
+    setDescontoValor("");
+    setDescontoJaPerguntado(false);
+    setTimeout(() => navigation.reset({ index: 0, routes: [{ name: "Home" }] }), 1200);
+  }, [pix, cliente, total, carrinho, feedbackPagamentoBalcao, navigation]);
 
   const verificarPixAgora = useCallback(async ({ silent = false } = {}) => {
     if (!pix?.pedidoId || pixPagoRef.current) return;
