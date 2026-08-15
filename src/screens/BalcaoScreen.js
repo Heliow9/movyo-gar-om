@@ -834,7 +834,7 @@ export default function BalcaoScreen({ navigation }) {
         pixPendente: isPix,
         pagamentoPendente: isPix,
         statusPagamento: isPix ? "aguardando_pagamento" : "pago",
-        status: isPix ? "aguardando_pagamento" : "pendente",
+        status: isPix ? "aguardando_pagamento" : "em_producao",
         notificarElectron: !isPix,
         notificarDesktop: !isPix,
         emitirSocket: !isPix,
